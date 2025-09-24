@@ -1,0 +1,41 @@
+# ================================================
+# .GITIGNORE - B2BSHIFT PLATFORM
+# Arquivos que não devem ser versionados
+# ================================================
+
+# Terraform files
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfplan
+.terraform/
+.terraform.lock.hcl
+
+# Outputs e logs
+deploy_outputs.txt
+terraform.log
+*.log
+
+# Backups
+*.backup.*
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Sensitive files
+credentials.json
+service-account.json
+*.pem
+*.key
+
+# Temporary files
+temp/
+tmp/
+*.tmp

@@ -1,0 +1,45 @@
+# ================================================
+# TERRAFORM.TFVARS.EXAMPLE - B2BSHIFT PLATFORM
+# Arquivo de exemplo para variáveis do Terraform
+# Copie para terraform.tfvars e ajuste os valores
+# ================================================
+
+# === CONFIGURAÇÕES BÁSICAS ===
+project_id     = "b2bshift"
+project_number = "849881353097"
+region         = "us-central1"
+zone           = "us-central1-a"
+environment    = "prod"
+
+# === CONFIGURAÇÕES DE BUCKETS ===
+buckets = [
+  "landing-zone",
+  "raw-zone",
+  "trusted-zone", 
+  "refined-zone",
+  "archive-zone"
+]
+
+# === CONFIGURAÇÕES DE DATASETS ===
+dataset_names = [
+  "b2bshift_raw",
+  "b2bshift_trusted",
+  "b2bshift_refined", 
+  "b2bshift_analytics"
+]
+
+# === CONFIGURAÇÕES DE MÁQUINAS ===
+machine_types = {
+  dataproc_master = "n1-standard-4"
+  dataproc_worker = "n1-standard-2" 
+  composer_node   = "n1-standard-2"
+}
+
+# === LABELS PADRÃO ===
+labels = {
+  project     = "b2bshift"
+  team        = "data-engineering"
+  managed-by  = "terraform"
+  environment = "dev"
+  cost-center = "data-platform"
+}
