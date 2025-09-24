@@ -1,0 +1,31 @@
+[tool.poetry]
+name = "b2shift-cluster-agent"
+version = "0.1.0"
+description = "AI Agent para análise de clusterização de clientes B2Shift e tomada de decisões"
+authors = ["FIAP Team <team@fiap.com>"]
+readme = "README.md"
+packages = [{include = "b2shift_cluster"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+google-adk = "*"
+pandas = "^2.0.0"
+numpy = "^1.24.0"
+scikit-learn = "^1.3.0"
+plotly = "^5.15.0"
+seaborn = "^0.12.0"
+matplotlib = "^3.7.0"
+google-cloud-bigquery = "^3.11.0"
+python-dotenv = "^1.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+black = "^23.7.0"
+flake8 = "^6.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+b2shift-agent = "b2shift_cluster.agent:main"
