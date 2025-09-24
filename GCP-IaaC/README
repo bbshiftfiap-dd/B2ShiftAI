@@ -1,0 +1,1130 @@
+# ☁️ GCP Infrastructure as Code - B2Shift Platform
+
+Deploy completo da infraestrutura Google Cloud Platform para a plataforma B2Shift usando Terraform.
+
+## 🏗️ Arquitetura da Infraestrutura
+
+```mermaid
+graph TB
+    subgraph "Data Ingestion"
+        A[External APIs] --> B[Pub/Sub Topics]
+        C[Batch Files] --> D[Cloud Storage Landing]
+        E[Real-time Streams] --> B
+    end
+    
+    subgraph "Data Lake (Cloud Storage)"
+        D --> F[Landing Zone]
+        F --> G[Raw Zone]
+        G --> H[Trusted Zone]
+        H --> I[Refined Zone]
+        I --> J[Archive Zone]
+    end
+    
+    subgraph "Data Processing"
+        K[Dataflow Jobs] --> L[ETL Pipelines]
+        M[Dataproc Clusters] --> N[Spark Processing]
+        O[Cloud Functions] --> P[Event Processing]
+    end
+    
+    subgraph "Data Warehouse"
+        Q[BigQuery Datasets]
+        Q --> R[Raw Dataset]
+        Q --> S[Trusted Dataset]
+        Q --> T[Refined Dataset]
+        Q --> U[Analytics Dataset]
+    end
+    
+    subgraph "ML Platform"
+        V[Vertex AI] --> W[Training Jobs]
+        V --> X[Model Endpoints]
+        V --> Y[Feature Store]
+        V --> Z[Notebooks]
+    end
+    
+    subgraph "Orchestration"
+        AA[Cloud Composer] --> BB[Airflow DAGs]
+        AA --> CC[Workflow Scheduler]
+    end
+    
+    subgraph "Governance"
+        DD[DataPlex] --> EE[Data Discovery]
+        DD --> FF[Quality Monitoring]
+        DD --> GG[Catalog Management]
+    end
+    
+    F --> L
+    L --> R
+    N --> S
+    S --> T
+    T --> U
+    BB --> K
+    BB --> M
+    EE --> Q
+```
+
+## 📋 Recursos Provisionados
+
+### 🗄️ Data Lake (Cloud Storage)
+
+| Bucket | Finalidade | Lifecycle | Encryption |
+|--------|------------|-----------|------------|
+| `landing-zone-{project}-{env}` | Dados brutos chegando | 7 dias → Raw | Google KMS |
+| `raw-zone-{project}-{env}` | Dados não processados | 30 dias → Trusted | Google KMS |
+| `trusted-zone-{project}-{env}` | Dados limpos/validados | 90 dias → Refined | Google KMS |
+| `refined-zone-{project}-{env}` | Dados agregados/otimizados | 1 ano → Archive | Google KMS |
+| `archive-zone-{project}-{env}` | Dados históricos | Retenção longa | Coldline Storage |
+
+### 🏢 Data Warehouse (BigQuery)
+
+#### Datasets e Estrutura
+
+```sql
+-- Raw Dataset: Dados brutos das fontes
+CREATE SCHEMA b2bshift_raw OPTIONS (
+  description = "Raw data from all sources - minimal transformation",
+  location = "us-central1"
+);
+
+-- Trusted Dataset: Dados limpos e validados  
+CREATE SCHEMA b2bshift_trusted OPTIONS (
+  description = "Clean and validated data with quality checks",
+  location = "us-central1"
+);
+
+-- Refined Dataset: Star Schema para analytics
+CREATE SCHEMA b2bshift_refined OPTIONS (
+  description = "Star schema optimized for analytics and reporting",
+  location = "us-central1"
+);
+
+-- Analytics Dataset: KPIs e métricas agregadas
+CREATE SCHEMA b2bshift_analytics OPTIONS (
+  description = "Business KPIs and aggregated metrics",
+  location = "us-central1"
+);
+```
+
+#### Tabelas Principais por Camada
+
+##### 🔵 Raw Layer (`b2bshift_raw`)
+```sql
+-- Sales Proposals (Dados brutos de propostas)
+CREATE TABLE b2bshift_raw.sales_proposals (
+  proposal_id STRING NOT NULL,
+  customer_id STRING,
+  proposal_date DATE,
+  proposal_value NUMERIC,
+  products_json JSON,
+  status STRING,
+  created_at TIMESTAMP,
+  data_source STRING
+) PARTITION BY proposal_date
+CLUSTER BY customer_id;
+
+-- Customer Stats (Estatísticas de clientes)
+CREATE TABLE b2bshift_raw.customer_stats (
+  customer_id STRING NOT NULL,
+  company_name STRING,
+  industry STRING,
+  employee_count INT64,
+  annual_revenue NUMERIC,
+  address_json JSON,
+  created_at TIMESTAMP,
+  updated_at TIMESTAMP
+) CLUSTER BY customer_id;
+
+-- Contracts (Contratos)
+CREATE TABLE b2bshift_raw.contracts (
+  contract_id STRING NOT NULL,
+  customer_id STRING,
+  contract_date DATE,
+  contract_value NUMERIC,
+  duration_months INT64,
+  products_json JSON,
+  status STRING,
+  created_at TIMESTAMP
+) PARTITION BY contract_date
+CLUSTER BY customer_id;
+```
+
+##### 🟢 Trusted Layer (`b2bshift_trusted`)
+```sql
+-- Customers (Clientes estruturados)
+CREATE TABLE b2bshift_trusted.customers (
+  customer_id STRING NOT NULL,
+  company_name STRING,
+  industry STRING,
+  employee_count INT64,
+  annual_revenue_brl NUMERIC,
+  city STRING,
+  state STRING,
+  region STRING,
+  customer_tier STRING,
+  acquisition_date DATE,
+  is_active BOOL,
+  data_quality_score NUMERIC,
+  last_updated TIMESTAMP
+) CLUSTER BY customer_tier, industry;
+
+-- Products (Catálogo estruturado)  
+CREATE TABLE b2bshift_trusted.products (
+  product_id STRING NOT NULL,
+  product_name STRING,
+  product_category STRING,
+  price_tier STRING,
+  is_saas BOOL,
+  is_active BOOL,
+  created_at TIMESTAMP
+) CLUSTER BY product_category;
+
+-- Sales (Vendas estruturadas)
+CREATE TABLE b2bshift_trusted.sales (
+  sale_id STRING NOT NULL,
+  customer_id STRING,
+  product_id STRING,
+  sale_date DATE,
+  quantity INT64,
+  unit_price NUMERIC,
+  total_value NUMERIC,
+  sale_type STRING,
+  channel STRING,
+  rep_id STRING,
+  created_at TIMESTAMP
+) PARTITION BY sale_date
+CLUSTER BY customer_id, product_id;
+```
+
+##### 🟡 Refined Layer (`b2bshift_refined`) - Star Schema
+```sql
+-- Dimension Tables
+CREATE TABLE b2bshift_refined.dim_customer (
+  customer_key STRING NOT NULL,
+  customer_id STRING,
+  company_name STRING,
+  industry STRING,
+  revenue_segment STRING,
+  geographic_region STRING,
+  customer_tier STRING,
+  acquisition_cohort STRING,
+  is_current BOOL,
+  effective_date DATE,
+  end_date DATE
+) CLUSTER BY revenue_segment, industry;
+
+CREATE TABLE b2bshift_refined.dim_product (
+  product_key STRING NOT NULL,
+  product_id STRING,
+  product_name STRING,
+  category STRING,
+  subcategory STRING,
+  price_tier STRING,
+  is_saas BOOL,
+  effective_date DATE,
+  end_date DATE
+) CLUSTER BY category, price_tier;
+
+CREATE TABLE b2bshift_refined.dim_time (
+  date_key STRING NOT NULL,
+  full_date DATE,
+  year INT64,
+  quarter INT64,
+  month INT64,
+  week INT64,
+  day_of_month INT64,
+  day_of_week INT64,
+  month_name STRING,
+  quarter_name STRING,
+  is_weekend BOOL,
+  is_holiday BOOL
+) CLUSTER BY year, quarter, month;
+
+-- Fact Tables
+CREATE TABLE b2bshift_refined.fact_sales (
+  sale_key STRING NOT NULL,
+  customer_key STRING,
+  product_key STRING,
+  time_key STRING,
+  quantity INT64,
+  unit_price NUMERIC,
+  total_value NUMERIC,
+  cost NUMERIC,
+  margin NUMERIC,
+  commission NUMERIC
+) PARTITION BY time_key
+CLUSTER BY customer_key, product_key;
+
+CREATE TABLE b2bshift_refined.fact_customer_metrics (
+  metric_key STRING NOT NULL,
+  customer_key STRING,
+  time_key STRING,
+  mrr NUMERIC,
+  arr NUMERIC,
+  clv NUMERIC,
+  churn_risk_score NUMERIC,
+  nps_score NUMERIC,
+  support_tickets INT64,
+  feature_adoption_score NUMERIC
+) PARTITION BY time_key
+CLUSTER BY customer_key;
+```
+
+##### 🔴 Analytics Layer (`b2bshift_analytics`)
+```sql
+-- Customer 360 View
+CREATE TABLE b2bshift_analytics.customer_360 (
+  customer_id STRING NOT NULL,
+  company_name STRING,
+  current_mrr NUMERIC,
+  current_arr NUMERIC,
+  ltv NUMERIC,
+  churn_probability NUMERIC,
+  expansion_opportunity NUMERIC,
+  health_score NUMERIC,
+  nps_score NUMERIC,
+  cluster_id STRING,
+  risk_segment STRING,
+  value_segment STRING,
+  last_updated TIMESTAMP
+) CLUSTER BY cluster_id, risk_segment;
+
+-- Sales Performance KPIs
+CREATE TABLE b2bshift_analytics.sales_kpis (
+  period_key STRING NOT NULL,
+  kpi_name STRING,
+  kpi_value NUMERIC,
+  target_value NUMERIC,
+  variance_pct NUMERIC,
+  trend STRING,
+  segment STRING,
+  last_updated TIMESTAMP
+) CLUSTER BY period_key, segment;
+```
+
+### ⚡ Data Processing
+
+#### Dataflow Jobs
+```hcl
+# ETL Job: Landing to Raw
+resource "google_dataflow_job" "landing_to_raw" {
+  name              = "b2shift-landing-to-raw"
+  template_gcs_path = "gs://${var.project_id}-templates/landing-to-raw-template"
+  temp_gcs_location = "gs://${google_storage_bucket.temp.name}/temp"
+  
+  parameters = {
+    inputSubscription = google_pubsub_subscription.data_ingestion.id
+    outputTable       = "${var.project_id}:b2bshift_raw.streaming_data"
+    windowDuration    = "1m"
+  }
+  
+  on_delete = "cancel"
+}
+
+# ETL Job: Raw to Trusted  
+resource "google_dataflow_job" "raw_to_trusted" {
+  name              = "b2shift-raw-to-trusted"
+  template_gcs_path = "gs://${var.project_id}-templates/raw-to-trusted-template"
+  
+  parameters = {
+    inputTable    = "${var.project_id}:b2bshift_raw.*"
+    outputDataset = "${var.project_id}:b2bshift_trusted"
+    batchSize     = "1000"
+  }
+}
+
+# ETL Job: Trusted to Refined
+resource "google_dataflow_job" "trusted_to_refined" {
+  name              = "b2shift-trusted-to-refined"
+  template_gcs_path = "gs://${var.project_id}-templates/trusted-to-refined-template"
+  
+  parameters = {
+    inputDataset  = "${var.project_id}:b2bshift_trusted"
+    outputDataset = "${var.project_id}:b2bshift_refined"
+    transformType = "star_schema"
+  }
+}
+```
+
+#### Dataproc Clusters
+```hcl
+resource "google_dataproc_cluster" "b2shift_cluster" {
+  name   = "b2shift-spark-cluster"
+  region = var.region
+
+  cluster_config {
+    staging_bucket = google_storage_bucket.temp.name
+
+    master_config {
+      num_instances = 1
+      machine_type  = "n1-standard-4"
+      disk_config {
+        boot_disk_type    = "pd-ssd"
+        boot_disk_size_gb = 100
+      }
+    }
+
+    worker_config {
+      num_instances = 2
+      machine_type  = "n1-standard-2"
+      disk_config {
+        boot_disk_type    = "pd-standard"
+        boot_disk_size_gb = 100
+        num_local_ssds    = 1
+      }
+    }
+
+    # Auto-scaling
+    preemptible_worker_config {
+      num_instances = 2
+    }
+
+    software_config {
+      image_version = "2.0-debian10"
+      properties = {
+        "spark:spark.sql.adaptive.enabled" = "true"
+        "spark:spark.sql.adaptive.coalescePartitions.enabled" = "true"
+      }
+    }
+
+    initialization_action {
+      script      = "gs://${google_storage_bucket.scripts.name}/init-cluster.sh"
+      timeout_sec = 500
+    }
+  }
+}
+```
+
+### 🤖 Machine Learning (Vertex AI)
+
+#### Datasets de ML
+```hcl
+resource "google_vertex_ai_dataset" "customer_clustering" {
+  display_name        = "B2Shift Customer Clustering"
+  metadata_schema_uri = "gs://google-cloud-aiplatform/schema/dataset/metadata/tabular_1.0.0.yaml"
+  region              = var.region
+
+  labels = {
+    environment = var.environment
+    project     = "b2shift"
+    use_case    = "customer_clustering"
+  }
+}
+
+resource "google_vertex_ai_dataset" "churn_prediction" {
+  display_name        = "B2Shift Churn Prediction"
+  metadata_schema_uri = "gs://google-cloud-aiplatform/schema/dataset/metadata/tabular_1.0.0.yaml"
+  region              = var.region
+}
+```
+
+#### Model Endpoints
+```hcl
+resource "google_vertex_ai_endpoint" "clustering_endpoint" {
+  name         = "b2shift-clustering-endpoint"
+  display_name = "B2Shift Customer Clustering Endpoint"
+  description  = "Endpoint for real-time customer clustering predictions"
+  region       = var.region
+
+  labels = {
+    environment = var.environment
+    model_type  = "clustering"
+  }
+}
+
+resource "google_vertex_ai_endpoint" "churn_endpoint" {
+  name         = "b2shift-churn-endpoint"
+  display_name = "B2Shift Churn Prediction Endpoint"
+  description  = "Endpoint for real-time churn probability predictions"
+  region       = var.region
+}
+```
+
+#### Feature Store
+```hcl
+resource "google_vertex_ai_featurestore" "b2shift_features" {
+  name         = "b2shift-feature-store"
+  region       = var.region
+  force_destroy = true
+
+  labels = {
+    environment = var.environment
+    project     = "b2shift"
+  }
+
+  online_serving_config {
+    fixed_node_count = 2
+  }
+
+  encryption_spec {
+    kms_key_name = google_kms_crypto_key.vertex_ai_key.id
+  }
+}
+
+# Entity Types
+resource "google_vertex_ai_featurestore_entitytype" "customer" {
+  name         = "customer"
+  featurestore = google_vertex_ai_featurestore.b2shift_features.id
+  
+  labels = {
+    entity_type = "customer"
+  }
+
+  monitoring_config {
+    snapshot_analysis {
+      disabled = false
+    }
+    categorical_threshold_config {
+      value = 0.3
+    }
+    numerical_threshold_config {
+      value = 0.3
+    }
+  }
+}
+
+# Features
+resource "google_vertex_ai_featurestore_entitytype_feature" "customer_features" {
+  for_each = toset([
+    "mrr", "arr", "clv", "churn_risk", "nps_score", 
+    "product_adoption", "support_tickets", "engagement_score"
+  ])
+  
+  name       = each.key
+  entitytype = google_vertex_ai_featurestore_entitytype.customer.id
+  
+  value_type = each.key == "nps_score" || each.key == "support_tickets" ? "INT64" : "DOUBLE"
+  
+  labels = {
+    feature_category = "customer_analytics"
+  }
+}
+```
+
+### 🎼 Orchestration (Cloud Composer)
+
+```hcl
+resource "google_composer_environment" "b2shift_airflow" {
+  name   = "b2shift-composer"
+  region = var.region
+
+  config {
+    node_count = 3
+
+    node_config {
+      zone         = "${var.region}-a"
+      machine_type = "n1-standard-2"
+      disk_size_gb = 100
+
+      oauth_scopes = [
+        "https://www.googleapis.com/auth/cloud-platform"
+      ]
+
+      service_account = google_service_account.composer.email
+    }
+
+    software_config {
+      image_version = "composer-2.0.0-airflow-2.2.3"
+      
+      pypi_packages = {
+        "pandas"         = ">=1.3.0"
+        "scikit-learn"   = ">=1.0.0"
+        "google-cloud-bigquery" = ">=2.0.0"
+        "google-cloud-storage"  = ">=2.0.0"
+      }
+
+      env_variables = {
+        PROJECT_ID        = var.project_id
+        BQ_DATASET_RAW    = "b2bshift_raw"
+        BQ_DATASET_TRUSTED = "b2bshift_trusted"
+        BQ_DATASET_REFINED = "b2bshift_refined"
+      }
+    }
+
+    private_environment_config {
+      enable_private_endpoint = true
+    }
+
+    web_server_access_control {
+      allowed_ip_range {
+        value = "0.0.0.0/0"
+        description = "Allow access from everywhere"
+      }
+    }
+  }
+
+  labels = {
+    environment = var.environment
+    team        = "data-engineering"
+  }
+}
+```
+
+#### DAGs Principais
+
+```python
+# dag_b2shift_daily_etl.py
+from airflow import DAG
+from airflow.providers.google.cloud.operators.dataflow import DataflowCreateJavaJobOperator
+from airflow.providers.google.cloud.operators.bigquery import BigQueryCreateEmptyDatasetOperator
+from datetime import datetime, timedelta
+
+default_args = {
+    'owner': 'data-engineering',
+    'depends_on_past': False,
+    'start_date': datetime(2024, 1, 1),
+    'email_on_failure': True,
+    'email_on_retry': False,
+    'retries': 2,
+    'retry_delay': timedelta(minutes=5)
+}
+
+dag = DAG(
+    'b2shift_daily_etl',
+    default_args=default_args,
+    description='Daily ETL pipeline for B2Shift data',
+    schedule_interval='0 2 * * *',  # Daily at 2 AM
+    catchup=False,
+    tags=['b2shift', 'etl', 'daily']
+)
+
+# Task 1: Raw to Trusted
+raw_to_trusted = DataflowCreateJavaJobOperator(
+    task_id='raw_to_trusted_transform',
+    jar='gs://b2shift-templates/raw-to-trusted-1.0.jar',
+    job_name='b2shift-raw-to-trusted-{{ ds }}',
+    options={
+        'inputTable': f'{PROJECT_ID}:b2bshift_raw.*',
+        'outputDataset': f'{PROJECT_ID}:b2bshift_trusted',
+        'date': '{{ ds }}'
+    },
+    dag=dag
+)
+
+# Task 2: Trusted to Refined
+trusted_to_refined = DataflowCreateJavaJobOperator(
+    task_id='trusted_to_refined_transform',
+    jar='gs://b2shift-templates/trusted-to-refined-1.0.jar',
+    job_name='b2shift-trusted-to-refined-{{ ds }}',
+    options={
+        'inputDataset': f'{PROJECT_ID}:b2bshift_trusted',
+        'outputDataset': f'{PROJECT_ID}:b2bshift_refined',
+        'date': '{{ ds }}'
+    },
+    dag=dag
+)
+
+# Task 3: Generate Analytics
+generate_analytics = BigQueryInsertJobOperator(
+    task_id='generate_daily_analytics',
+    configuration={
+        'query': {
+            'query': """
+                CALL `{{ params.project_id }}.b2bshift_procedures.generate_daily_kpis`('{{ ds }}')
+            """,
+            'useLegacySql': False
+        }
+    },
+    params={'project_id': PROJECT_ID},
+    dag=dag
+)
+
+# Dependencies
+raw_to_trusted >> trusted_to_refined >> generate_analytics
+```
+
+### 🏛️ Data Governance (DataPlex)
+
+```hcl
+resource "google_dataplex_lake" "b2shift_lake" {
+  location     = var.region
+  name         = "b2shift-data-lake"
+  display_name = "B2Shift Data Lake"
+
+  labels = {
+    environment = var.environment
+    team        = "data-engineering"
+  }
+}
+
+# Raw Data Zone
+resource "google_dataplex_zone" "raw_zone" {
+  discovery_spec {
+    enabled = true
+    
+    csv_options {
+      header_rows = 1
+      delimiter   = ","
+    }
+    
+    json_options {
+      encoding = "UTF-8"
+    }
+  }
+
+  lake     = google_dataplex_lake.b2shift_lake.name
+  location = var.region
+  name     = "raw-zone"
+  type     = "RAW"
+
+  resource_spec {
+    location_type = "MULTI_REGION"
+  }
+
+  labels = {
+    zone_type = "raw"
+  }
+}
+
+# Curated Data Zone  
+resource "google_dataplex_zone" "curated_zone" {
+  discovery_spec {
+    enabled = true
+  }
+
+  lake     = google_dataplex_lake.b2shift_lake.name
+  location = var.region
+  name     = "curated-zone"
+  type     = "CURATED"
+
+  resource_spec {
+    location_type = "MULTI_REGION"
+  }
+
+  labels = {
+    zone_type = "curated"
+  }
+}
+
+# Data Quality Tasks
+resource "google_dataplex_task" "data_quality_check" {
+  task_id      = "data-quality-daily"
+  location     = var.region
+  lake         = google_dataplex_lake.b2shift_lake.name
+
+  trigger_spec {
+    type = "RECURRING"
+    
+    schedule = "0 3 * * *"  # Daily at 3 AM
+  }
+
+  execution_spec {
+    service_account = google_service_account.dataplex.email
+    
+    args = {
+      "TASK_ARGS" = jsonencode({
+        "dataset_id" = "b2bshift_trusted"
+        "table_patterns" = ["customers", "sales", "contracts"]
+        "quality_checks" = ["completeness", "validity", "consistency"]
+      })
+    }
+  }
+
+  spark {
+    python_script_file = "gs://${google_storage_bucket.scripts.name}/data_quality_check.py"
+  }
+
+  labels = {
+    task_type = "data_quality"
+  }
+}
+```
+
+## 💰 Estimativa de Custos
+
+### Custos Mensais Estimados (USD)
+
+| Serviço | Configuração | Custo Estimado | Observações |
+|---------|-------------|----------------|-------------|
+| **BigQuery** | 500GB storage + 10TB queries | $100-200 | Varia com uso |
+| **Cloud Storage** | 1TB multi-region + operations | $30-50 | Classes diferentes |
+| **Dataflow** | 3 jobs, 4h/day cada | $150-250 | Baseado em workers |
+| **Dataproc** | Cluster 1+2 nodes, 8h/day | $100-200 | Preemptible workers |
+| **Vertex AI** | 2 endpoints + notebooks | $80-150 | Baseado em usage |
+| **Composer** | 3 nodes, ambiente small | $200-300 | Custo fixo alto |
+| **DataPlex** | 2 zones + quality tasks | $50-100 | Baseado em discovery |
+| **Pub/Sub** | 1M mensagens/dia | $10-20 | Volume baixo |
+| **Cloud Functions** | 1M execuções/mês | $5-10 | Serverless |
+| **Networking** | Regional traffic | $20-40 | Data transfer |
+| **KMS** | Key operations | $5-10 | Security |
+
+### **Total Estimado: $750-1,380/mês**
+
+#### Otimizações de Custo
+- **Preemptible VMs**: -60% nos custos de Dataproc
+- **Coldline Storage**: -70% para dados archived
+- **Scheduled Instances**: Ligar/desligar recursos não-críticos
+- **Committed Use Discounts**: -20-30% com reservas de 1-3 anos
+
+## 🔧 Deploy e Configuração
+
+### Pré-requisitos
+
+```bash
+# 1. Instalar ferramentas
+brew install terraform
+brew install google-cloud-sdk
+
+# 2. Autenticar no GCP
+gcloud auth login
+gcloud auth application-default login
+
+# 3. Configurar projeto
+gcloud config set project seu-projeto-id
+```
+
+### Configuração Inicial
+
+```bash
+# 1. Clone o repositório
+cd GCP-IaaC/gcp-b2bshift-iac
+
+# 2. Copie e configure variáveis
+cp terraform.tfvars.example terraform.tfvars
+```
+
+```hcl
+# terraform.tfvars
+project_id = "seu-projeto-b2shift"
+region     = "us-central1"
+zone       = "us-central1-a"
+
+environment = "production"
+team        = "data-engineering"
+
+# Data Lake Configuration
+data_lake_buckets = {
+  landing_zone = "landing-zone-bucket"
+  raw_zone     = "raw-zone-bucket"
+  trusted_zone = "trusted-zone-bucket"
+  refined_zone = "refined-zone-bucket"
+  archive_zone = "archive-zone-bucket"
+}
+
+# BigQuery Configuration
+bq_datasets = {
+  raw      = "b2bshift_raw"
+  trusted  = "b2bshift_trusted"
+  refined  = "b2bshift_refined"
+  analytics = "b2bshift_analytics"
+}
+
+# Processing Configuration
+dataproc_config = {
+  master_machine_type = "n1-standard-4"
+  worker_machine_type = "n1-standard-2"
+  worker_count        = 2
+  preemptible_count   = 2
+}
+
+# ML Configuration
+vertex_ai_config = {
+  region = "us-central1"
+  enable_notebooks = true
+  enable_endpoints = true
+}
+
+# Security Configuration
+enable_encryption = true
+kms_key_ring      = "b2shift-key-ring"
+```
+
+### Deploy em Etapas
+
+```bash
+# 1. Inicializar Terraform
+terraform init
+
+# 2. Validar configuração
+terraform validate
+terraform fmt
+
+# 3. Planejar deploy
+terraform plan -var-file="terraform.tfvars"
+
+# 4. Deploy por módulos (recomendado)
+# Primeiro: APIs e configurações básicas
+terraform apply -target=google_project_service.required_apis
+terraform apply -target=google_kms_key_ring.main
+terraform apply -target=google_kms_crypto_key.main
+
+# Segundo: Storage
+terraform apply -target=module.storage
+
+# Terceiro: BigQuery
+terraform apply -target=module.bigquery
+
+# Quarto: Processamento
+terraform apply -target=module.dataflow
+terraform apply -target=module.dataproc
+
+# Quinto: ML Platform
+terraform apply -target=module.vertex_ai
+
+# Sexto: Orquestração
+terraform apply -target=module.composer
+
+# Sétimo: Governança
+terraform apply -target=module.dataplex
+
+# Ou deploy completo (para experts)
+terraform apply -var-file="terraform.tfvars" -auto-approve
+```
+
+### Validação do Deploy
+
+```bash
+# Script de validação automática
+./validate.ps1
+
+# Testes manuais
+gcloud storage buckets list --filter="name:b2shift"
+bq ls --project_id=seu-projeto-id
+gcloud dataproc clusters list --region=us-central1
+gcloud ai endpoints list --region=us-central1
+```
+
+### Post-Deploy Setup
+
+```bash
+# 1. Upload de templates e scripts
+gsutil -m cp -r ./templates/* gs://seu-bucket-templates/
+gsutil -m cp -r ./scripts/* gs://seu-bucket-scripts/
+
+# 2. Configurar DAGs do Airflow
+gsutil -m cp -r ./dags/* gs://seu-bucket-composer/dags/
+
+# 3. Criar tabelas iniciais
+bq query --use_legacy_sql=false < sql/create_raw_tables.sql
+bq query --use_legacy_sql=false < sql/create_trusted_tables.sql
+bq query --use_legacy_sql=false < sql/create_refined_tables.sql
+
+# 4. Configurar feature store
+python scripts/setup_feature_store.py
+
+# 5. Deploy de modelos iniciais
+python scripts/deploy_initial_models.py
+```
+
+## 🔍 Monitoramento e Observabilidade
+
+### Dashboards Principais
+
+1. **Infrastructure Overview**: Status geral dos recursos
+2. **Data Pipeline Health**: Status dos jobs ETL/ELT
+3. **Cost Management**: Tracking de custos por serviço
+4. **Security Monitoring**: Alertas de segurança
+5. **Performance Metrics**: Latência e throughput
+
+### Alerting Rules
+
+```yaml
+# Cloud Monitoring Alerts
+alerts:
+  - name: "High BigQuery Costs"
+    condition: "bigquery.googleapis.com/billing/bytes_billed > 1TB/day"
+    notification: "slack://data-team"
+    
+  - name: "Dataflow Job Failures"
+    condition: "dataflow.googleapis.com/job/is_failed == 1"
+    notification: "pagerduty://on-call"
+    
+  - name: "Storage Bucket Errors"
+    condition: "storage.googleapis.com/api/request_count{response_code!~'2..'} > 100"
+    notification: "email://admin@company.com"
+```
+
+### Log Analysis
+
+```sql
+-- Análise de logs no BigQuery
+SELECT
+  timestamp,
+  resource.labels.project_id,
+  resource.type,
+  severity,
+  json_extract_scalar(json_payload, '$.message') as message,
+  json_extract_scalar(json_payload, '$.error_code') as error_code
+FROM
+  `seu-projeto.logs.cloudaudit_googleapis_com_activity`
+WHERE
+  resource.type = 'bigquery_dataset'
+  AND timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 HOUR)
+  AND severity = 'ERROR'
+ORDER BY timestamp DESC;
+```
+
+## 🔒 Segurança e Compliance
+
+### IAM e Controles de Acesso
+
+```hcl
+# Service Accounts especializadas
+resource "google_service_account" "data_processing" {
+  account_id   = "b2shift-data-processing"
+  display_name = "B2Shift Data Processing Service Account"
+}
+
+resource "google_service_account" "ml_training" {
+  account_id   = "b2shift-ml-training"
+  display_name = "B2Shift ML Training Service Account"
+}
+
+# IAM Roles granulares
+resource "google_project_iam_member" "data_processing_permissions" {
+  for_each = toset([
+    "roles/bigquery.dataEditor",
+    "roles/storage.objectAdmin",
+    "roles/dataflow.worker"
+  ])
+  
+  role   = each.key
+  member = "serviceAccount:${google_service_account.data_processing.email}"
+}
+
+# Custom Role para analistas
+resource "google_project_iam_custom_role" "data_analyst" {
+  role_id = "b2shift_data_analyst"
+  title   = "B2Shift Data Analyst"
+  
+  permissions = [
+    "bigquery.datasets.get",
+    "bigquery.tables.list",
+    "bigquery.tables.get",
+    "bigquery.tables.getData",
+    "bigquery.jobs.create"
+  ]
+}
+```
+
+### Encryption e KMS
+
+```hcl
+resource "google_kms_key_ring" "b2shift_ring" {
+  name     = "b2shift-key-ring"
+  location = "us-central1"
+}
+
+resource "google_kms_crypto_key" "data_encryption_key" {
+  name     = "data-encryption-key"
+  key_ring = google_kms_key_ring.b2shift_ring.id
+  
+  purpose = "ENCRYPT_DECRYPT"
+  
+  lifecycle {
+    prevent_destroy = true
+  }
+  
+  rotation_period = "7776000s"  # 90 days
+}
+
+# Aplicar encryption aos buckets
+resource "google_storage_bucket" "encrypted_bucket" {
+  name     = "b2shift-encrypted-data"
+  location = "US"
+  
+  encryption {
+    default_kms_key_name = google_kms_crypto_key.data_encryption_key.id
+  }
+}
+```
+
+### Network Security
+
+```hcl
+# VPC para isolamento
+resource "google_compute_network" "b2shift_vpc" {
+  name                    = "b2shift-vpc"
+  auto_create_subnetworks = false
+}
+
+resource "google_compute_subnetwork" "data_subnet" {
+  name          = "b2shift-data-subnet"
+  ip_cidr_range = "10.1.0.0/16"
+  region        = var.region
+  network       = google_compute_network.b2shift_vpc.id
+  
+  private_ip_google_access = true
+}
+
+# Firewall rules restritivas
+resource "google_compute_firewall" "allow_internal" {
+  name    = "b2shift-allow-internal"
+  network = google_compute_network.b2shift_vpc.name
+
+  allow {
+    protocol = "tcp"
+    ports    = ["80", "443", "22"]
+  }
+
+  source_ranges = ["10.1.0.0/16"]
+}
+```
+
+## 🧹 Limpeza e Destruição
+
+### Limpeza Seletiva
+
+```bash
+# Remover apenas recursos de desenvolvimento
+terraform destroy -target=module.dev_environment
+
+# Remover recursos temporários
+terraform destroy -target=google_dataproc_cluster.temp_cluster
+```
+
+### Destruição Completa
+
+```bash
+# ⚠️ ATENÇÃO: Isso apaga TUDO!
+terraform destroy -var-file="terraform.tfvars"
+```
+
+### Backup Antes da Destruição
+
+```bash
+# Script de backup automático
+./scripts/backup_before_destroy.sh
+
+# Manual backup dos dados críticos
+bq extract --destination_format=PARQUET \
+  'b2bshift_analytics.customer_360' \
+  'gs://backup-bucket/customer_360_$(date +%Y%m%d).parquet'
+```
+
+## 🚀 Próximos Passos
+
+### Melhorias Planejadas
+
+- [ ] **Multi-region Deployment**: Alta disponibilidade
+- [ ] **Auto-scaling Policies**: Scaling automático baseado em uso
+- [ ] **Advanced Security**: Zero-trust networking
+- [ ] **Cost Optimization**: Políticas de lifecycle automáticas
+- [ ] **CI/CD Integration**: Deploy automático via GitHub Actions
+
+### Roadmap de Infrastructure
+
+#### Q1 2024
+- [ ] Implementar monitoramento avançado
+- [ ] Configurar disaster recovery
+- [ ] Otimizar custos com policies
+- [ ] Adicionar mais regiões
+
+#### Q2 2024
+- [ ] Kubernetes integration para ML workloads
+- [ ] Stream processing com Pub/Sub
+- [ ] Advanced analytics com Looker
+- [ ] Real-time feature serving
+
+---
+
+## 📞 Suporte
+
+Para questões sobre infraestrutura:
+
+- **🔧 Infrastructure Issues**: Use label `infrastructure`
+- **💰 Cost Questions**: Use label `cost-optimization` 
+- **🔒 Security**: Use label `security`
+- **📈 Performance**: Use label `performance`
+
+---
+
+*Infrastructure as Code desenvolvida com ❤️ pela equipe de Cloud Engineering*
