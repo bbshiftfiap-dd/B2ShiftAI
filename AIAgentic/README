@@ -1,0 +1,577 @@
+# 🤖 AI Agentic System - B2Shift
+
+Sistema de IA Multi-Agent baseado no Google Agent Development Kit (ADK) para análise inteligente de clusterização de clientes B2B.
+
+## 🎯 Visão Geral
+
+O AI Agentic System é o coração inteligente da plataforma B2Shift, implementando uma arquitetura multi-agent sofisticada que combina:
+
+- **🧠 Inteligência Distribuída**: Agentes especializados trabalhando em conjunto
+- **🔄 Orquestração Inteligente**: Coordenação automática de workflows complexos
+- **📊 Análise Avançada**: Machine Learning integrado com reasoning de IA
+- **🎯 Decisões Estratégicas**: Geração automática de estratégias de negócio
+
+## 🏗️ Arquitetura Multi-Agent
+
+```mermaid
+graph TB
+    subgraph "User Interface"
+        A[Natural Language Query] --> B[Root Agent]
+    end
+    
+    subgraph "Orchestration Layer"
+        B[B2Shift Root Agent<br/>Gemini 1.5 Pro] --> C[Intent Classification]
+        C --> D[Workflow Selection]
+        D --> E[Sub-Agent Coordination]
+    end
+    
+    subgraph "Specialized Agents"
+        E --> F[Data Agent<br/>Gemini 1.5 Flash]
+        E --> G[Cluster Agent<br/>Gemini 1.5 Flash] 
+        E --> H[Decision Agent<br/>Gemini 1.5 Pro]
+    end
+    
+    subgraph "Execution Layer"
+        F --> I[Data Processing<br/>Python + BigQuery]
+        G --> J[ML Algorithms<br/>Scikit-learn + Custom]
+        H --> K[Strategy Generation<br/>Business Rules Engine]
+    end
+    
+    subgraph "Output Layer"
+        I --> L[Consolidated Results]
+        J --> L
+        K --> L
+        L --> M[Executive Report]
+        L --> N[Actionable Insights]
+        L --> O[ROI Projections]
+    end
+```
+
+## 🧩 Componentes dos Agentes
+
+### 🎯 B2Shift Root Agent
+
+**Modelo**: Gemini 1.5 Pro  
+**Responsabilidade**: Orquestração e Decisões Estratégicas
+
+#### Funcionalidades Principais
+- **Interpretação de Linguagem Natural**: Processa queries complexas dos usuários
+- **Coordenação de Workflow**: Orquestra execução de sub-agentes
+- **Consolidação de Resultados**: Integra outputs de múltiplas fontes
+- **Geração de Insights Executivos**: Produz relatórios de alto nível
+
+#### Exemplo de Interação
+```python
+query = """
+Analise nossos clientes B2B e identifique os 5 principais clusters.
+Para cada cluster, gere estratégias específicas de go-to-market
+com projeções de ROI para os próximos 12 meses.
+"""
+
+response = await root_agent.process_query(query)
+```
+
+### 📊 Data Agent
+
+**Modelo**: Gemini 1.5 Flash  
+**Responsabilidade**: Preparação e Análise de Dados
+
+#### Capacidades Técnicas
+```python
+class DataAgent:
+    async def extract_customer_data(self, filters: Dict) -> DataFrame:
+        """Extrai dados do BigQuery com filtros específicos"""
+        
+    async def validate_data_quality(self, data: DataFrame) -> QualityReport:
+        """Executa validações de qualidade automáticas"""
+        
+    async def engineer_features(self, raw_data: DataFrame) -> DataFrame:
+        """Cria features específicas para análise B2B"""
+        
+    async def prepare_for_clustering(self, data: DataFrame) -> ClusterData:
+        """Normaliza e prepara dados para algoritmos ML"""
+```
+
+#### Pipeline de Processamento
+1. **Extração**: BigQuery, CRM APIs, Data Lake
+2. **Validação**: Missing values, outliers, consistency
+3. **Feature Engineering**: RFM, behavioral features, business metrics
+4. **Normalization**: StandardScaler, robust scaling
+
+### 🔬 Cluster Agent
+
+**Modelo**: Gemini 1.5 Flash  
+**Responsabilidade**: Algoritmos de Clusterização e Análise ML
+
+#### Algoritmos Implementados
+
+##### K-Means Adaptativo
+```python
+async def adaptive_kmeans(self, data: np.ndarray, max_clusters: int = 10):
+    """
+    K-Means com determinação automática do número ideal de clusters
+    usando Elbow Method + Silhouette Analysis
+    """
+    best_k = self._find_optimal_clusters(data, max_clusters)
+    kmeans = KMeans(n_clusters=best_k, random_state=42, n_init='auto')
+    return kmeans.fit(data)
+```
+
+##### DBSCAN para Outliers
+```python
+async def dbscan_analysis(self, data: np.ndarray):
+    """
+    DBSCAN para identificação de outliers e clusters de densidade
+    Otimizado para dados B2B com ruído
+    """
+    eps = self._estimate_eps(data)
+    min_samples = max(int(len(data) * 0.01), 5)
+    return DBSCAN(eps=eps, min_samples=min_samples).fit(data)
+```
+
+##### Clustering Hierárquico
+```python
+async def hierarchical_clustering(self, data: np.ndarray):
+    """
+    Clustering hierárquico para análise de sub-segmentos
+    Com dendrogramas interativos
+    """
+    linkage_matrix = linkage(data, method='ward')
+    return AgglomerativeClustering(
+        n_clusters=self._find_optimal_hierarchy(linkage_matrix)
+    ).fit(data)
+```
+
+#### Métricas de Validação
+
+| Métrica | Fórmula | Interpretação |
+|---------|---------|---------------|
+| **Silhouette Score** | `s = (b - a) / max(a, b)` | [-1, 1]: Maior = Melhor |
+| **Davies-Bouldin** | `DB = (1/n) * Σ max((σi + σj)/d(ci,cj))` | [0, ∞): Menor = Melhor |
+| **Calinski-Harabasz** | `CH = (BSS/(k-1)) / (WSS/(n-k))` | [0, ∞): Maior = Melhor |
+
+### 🎯 Decision Agent
+
+**Modelo**: Gemini 1.5 Pro  
+**Responsabilidade**: Estratégias de Negócio e ROI
+
+#### Framework de Decisão
+
+```python
+class DecisionAgent:
+    async def analyze_cluster_business_potential(self, cluster: ClusterProfile):
+        """
+        Analisa potencial de negócio considerando:
+        - Revenue atual e projetado
+        - Customer lifetime value
+        - Propensão a churn
+        - Oportunidades de cross-sell/upsell
+        """
+        
+    async def generate_gtm_strategy(self, cluster: ClusterProfile):
+        """
+        Gera estratégia go-to-market personalizada:
+        - Positioning e messaging
+        - Canais de aquisição
+        - Pricing strategy  
+        - Content marketing approach
+        """
+        
+    async def calculate_roi_projections(self, strategy: GTMStrategy):
+        """
+        Projeta ROI considerando:
+        - Investment required
+        - Timeline de implementação
+        - Conversion rates esperadas
+        - Revenue projections
+        """
+```
+
+#### Tipos de Estratégias Geradas
+
+##### Enterprise Customers (Cluster 1)
+```yaml
+profile:
+  size: "Large enterprises (500+ employees)"
+  revenue: "$1M+ ARR"
+  characteristics: "Complex needs, long sales cycles"
+  
+strategy:
+  approach: "Consultative selling, custom solutions"
+  channels: "Direct sales, partner channel"
+  pricing: "Value-based pricing, annual contracts"
+  content: "ROI calculators, case studies, whitepapers"
+  
+roi_projection:
+  investment: "$500K"
+  timeline: "12-18 months"
+  expected_revenue: "$2.5M"
+  net_roi: "400%"
+```
+
+##### SMB Tech Companies (Cluster 2)  
+```yaml
+profile:
+  size: "50-500 employees"
+  revenue: "$100K-1M ARR" 
+  characteristics: "Tech-savvy, price-sensitive"
+  
+strategy:
+  approach: "Product-led growth, self-serve + sales"
+  channels: "Digital marketing, inside sales"
+  pricing: "Freemium model, monthly subscriptions"
+  content: "Product demos, tutorials, community"
+  
+roi_projection:
+  investment: "$200K"
+  timeline: "6-9 months"
+  expected_revenue: "$800K"
+  net_roi: "300%"
+```
+
+## 🔄 Workflows de Execução
+
+### Workflow 1: Análise Completa de Clusterização
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant R as Root Agent
+    participant D as Data Agent
+    participant C as Cluster Agent
+    participant Dec as Decision Agent
+    
+    U->>R: "Analyze customers and create strategies"
+    R->>D: Extract and prepare customer data
+    D->>D: Data quality validation
+    D->>D: Feature engineering
+    D-->>R: Clean dataset ready
+    
+    R->>C: Run clustering algorithms
+    C->>C: K-Means analysis
+    C->>C: DBSCAN outlier detection
+    C->>C: Cluster validation
+    C-->>R: Cluster profiles identified
+    
+    R->>Dec: Generate business strategies
+    Dec->>Dec: Analyze cluster potential
+    Dec->>Dec: Create GTM strategies
+    Dec->>Dec: Calculate ROI projections
+    Dec-->>R: Strategic recommendations
+    
+    R->>R: Consolidate all results
+    R-->>U: Executive report with insights
+```
+
+### Workflow 2: Análise de Cliente Específico
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant R as Root Agent
+    participant D as Data Agent
+    participant C as Cluster Agent
+    participant Dec as Decision Agent
+    
+    U->>R: "Analyze customer ACME Corp"
+    R->>D: Get ACME Corp data
+    D-->>R: Customer profile
+    
+    R->>C: Identify customer cluster
+    C-->>R: Cluster assignment + similarity
+    
+    R->>Dec: Generate recommendations
+    Dec-->>R: Personalized strategy
+    
+    R-->>U: Customer-specific insights
+```
+
+## 💡 Exemplos de Uso Avançado
+
+### 1. Análise Estratégica Completa
+
+```python
+async def strategic_analysis():
+    query = """
+    Execute uma análise estratégica completa dos nossos clientes B2B:
+    
+    1. Identifique 5-7 clusters principais usando múltiplos algoritmos
+    2. Para cada cluster, analise:
+       - Perfil demográfico e comportamental
+       - Métricas de negócio (MRR, LTV, Churn Risk)
+       - Posicionamento competitivo
+       
+    3. Gere estratégias específicas incluindo:
+       - Go-to-market personalizado
+       - Pricing strategy otimizado
+       - Product roadmap recommendations
+       - Channel strategy
+       
+    4. Projete ROI para cada estratégia em:
+       - 6 meses (quick wins)
+       - 12 meses (medium term)
+       - 24 meses (strategic goals)
+    
+    5. Defina KPIs de acompanhamento e early warning indicators
+    """
+    
+    result = await b2shift_root_agent.process_comprehensive_analysis(query)
+    return result.strategic_plan
+```
+
+### 2. Otimização de Portfolio
+
+```python
+async def portfolio_optimization():
+    query = """
+    Otimize nosso portfolio de produtos considerando:
+    
+    1. Performance atual por cluster de cliente
+    2. Market fit de cada produto por segmento
+    3. Oportunidades de cross-sell e upsell
+    4. Gaps no portfolio vs necessidades dos clusters
+    
+    Recomende:
+    - Produtos a descontinuar
+    - Produtos a desenvolver
+    - Bundling strategies
+    - Pricing optimization
+    
+    Projete impacto financeiro das recomendações.
+    """
+    
+    optimization = await b2shift_root_agent.optimize_portfolio(query)
+    return optimization.recommendations
+```
+
+### 3. Predição e Prevenção de Churn
+
+```python
+async def churn_prevention_analysis():
+    query = """
+    Analise risco de churn por cluster e cliente:
+    
+    1. Identifique early warning signals por cluster
+    2. Calcule churn probability para cada cliente
+    3. Segmente clientes por risco (high/medium/low)
+    4. Gere playbooks de retenção específicos
+    5. Projete impacto financeiro das ações preventivas
+    
+    Foque em clientes de alto valor com risco médio-alto.
+    """
+    
+    churn_analysis = await b2shift_root_agent.analyze_churn_risk(query)
+    return churn_analysis.prevention_plan
+```
+
+## 🔧 Configuração e Deployment
+
+### Configuração Local
+
+```bash
+# 1. Clone o repositório
+cd AIAgentic/b2shift-cluster-agent-adk/b2shift-cluster-agent
+
+# 2. Instalar dependências
+poetry install
+
+# 3. Configurar variáveis de ambiente
+cp .env.example .env
+# Editar .env com suas credenciais GCP
+```
+
+### Variáveis de Ambiente
+
+```env
+# Google Cloud Configuration
+GOOGLE_CLOUD_PROJECT=seu-projeto-gcp
+GOOGLE_CLOUD_LOCATION=us-central1
+GOOGLE_APPLICATION_CREDENTIALS=path/to/service-account.json
+
+# BigQuery Configuration  
+BQ_PROJECT_ID=seu-projeto-bigquery
+BQ_DATASET_ID=b2bshift_customer_data
+
+# Model Configuration
+ROOT_AGENT_MODEL=gemini-1.5-pro
+DATA_AGENT_MODEL=gemini-1.5-flash
+CLUSTER_AGENT_MODEL=gemini-1.5-flash
+DECISION_AGENT_MODEL=gemini-1.5-pro
+
+# B2Shift Specific Settings
+B2SHIFT_MIN_CLUSTER_SIZE=50
+B2SHIFT_MAX_CLUSTERS=10
+B2SHIFT_CONFIDENCE_THRESHOLD=0.8
+```
+
+### Deploy no Vertex AI
+
+```bash
+# Deploy usando ADK
+poetry run adk deploy --create --resource_name="b2shift-agent"
+
+# Testar deployment
+poetry run python deployment/test_deployment.py
+```
+
+### Comandos de Desenvolvimento
+
+```bash
+# Executar todos os testes
+make test
+
+# Demo interativa
+make demo
+
+# Executar CLI interativa
+make run-cli
+
+# Análise rápida
+make demo-quick
+
+# Validar configuração
+make validate
+
+# Limpar cache e logs
+make clean
+```
+
+## 📊 Monitoramento e Observabilidade
+
+### Métricas de Performance
+
+| Categoria | Métrica | Threshold | Alertas |
+|-----------|---------|-----------|---------|
+| **Latency** | Agent response time | < 30s | Slack + PagerDuty |
+| **Quality** | Silhouette score | > 0.5 | Email |
+| **Business** | Strategy adoption rate | > 70% | Dashboard |
+| **Cost** | Monthly GCP spend | < $5000 | Email + Slack |
+
+### Logs e Debugging
+
+```python
+# Logs estruturados para cada agent
+import structlog
+
+logger = structlog.get_logger()
+
+async def process_query(self, query: str):
+    logger.info(
+        "agent_execution_start",
+        agent=self.name,
+        query_hash=hash(query),
+        timestamp=datetime.now()
+    )
+    
+    try:
+        result = await self._execute(query)
+        logger.info(
+            "agent_execution_success", 
+            agent=self.name,
+            execution_time=time.time() - start_time,
+            result_size=len(str(result))
+        )
+        return result
+        
+    except Exception as e:
+        logger.error(
+            "agent_execution_error",
+            agent=self.name, 
+            error=str(e),
+            stack_trace=traceback.format_exc()
+        )
+        raise
+```
+
+### Dashboard de Monitoramento
+
+Acesse em tempo real:
+- **Agent Performance**: Response times, success rates
+- **Cluster Quality**: Métricas de ML por execução
+- **Business Impact**: ROI realizados vs projetados
+- **System Health**: Recursos GCP, custos, uptime
+
+## 🔒 Segurança e Compliance
+
+### Controles de Acesso
+
+```python
+# Role-based access control
+ROLES = {
+    "data_scientist": ["view_clusters", "run_analysis"],
+    "business_analyst": ["view_strategies", "export_reports"],
+    "admin": ["all_permissions"],
+    "readonly": ["view_dashboards"]
+}
+
+@require_role("data_scientist")
+async def run_clustering_analysis(query: str):
+    # Só data scientists podem executar análises
+    pass
+```
+
+### Auditoria e Compliance
+
+- **Audit Trail**: Todas as execuções são logadas
+- **Data Lineage**: Rastreamento de origem dos dados
+- **LGPD Compliance**: Anonimização de PII
+- **Model Versioning**: Controle de versões dos modelos
+
+### Proteção contra Prompt Injection
+
+```python
+def sanitize_prompt(user_input: str) -> str:
+    """
+    Sanitiza input do usuário para prevenir prompt injection
+    """
+    # Remove comandos suspeitos
+    blocked_patterns = [
+        r"ignore previous instructions",
+        r"system:",
+        r"<\|.*?\|>",
+        r"___",
+    ]
+    
+    for pattern in blocked_patterns:
+        user_input = re.sub(pattern, "", user_input, flags=re.IGNORECASE)
+    
+    return user_input[:1000]  # Limite de tamanho
+```
+
+## 🚀 Próximos Passos
+
+### Roadmap Técnico
+
+#### Q1 2024
+- [ ] **API REST**: Endpoints para integração externa
+- [ ] **Batch Processing**: Análises agendadas em lote
+- [ ] **Model Optimization**: Hyperparameter tuning automático
+- [ ] **Advanced Visualizations**: Interactive dashboards
+
+#### Q2 2024  
+- [ ] **Real-time Clustering**: Streaming analysis com Pub/Sub
+- [ ] **AutoML Integration**: Vertex AutoML para otimização
+- [ ] **Multi-language Support**: Agents em português nativo
+- [ ] **Advanced Security**: Zero-trust architecture
+
+### Funcionalidades Futuras
+
+1. **Federated Learning**: ML distribuído entre clientes
+2. **Explainable AI**: Modelos interpretáveis 
+3. **Edge Deployment**: Agentes rodando on-premises
+4. **Quantum-ready**: Preparação para quantum computing
+
+---
+
+## 📞 Suporte Técnico
+
+Para questões específicas do sistema AI Agentic:
+
+- **🔧 Issues Técnicas**: GitHub Issues
+- **💬 Discussões**: GitHub Discussions  
+- **📧 Suporte Enterprise**: ai-support@b2shift.com
+- **📚 Documentação**: [Wiki Técnico](./docs/)
+
+---
+
+*Sistema desenvolvido com ❤️ usando Google Agent Development Kit*
