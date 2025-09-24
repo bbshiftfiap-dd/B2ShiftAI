@@ -1,0 +1,257 @@
+{
+  "name": "B2Shift AgenticAI Chat",
+  "nodes": [
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C09FWJUHN3Z",
+          "mode": "list",
+          "cachedResultName": "b2shift-customersupport"
+        },
+        "text": "={{ $json.output }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1328,
+        -48
+      ],
+      "id": "3180c4e7-9bfa-4c16-85d1-a27bc736558d",
+      "name": "Send a message",
+      "webhookId": "6d6d0144-de9e-4866-8c70-451d52c8b9fb",
+      "credentials": {
+        "slackApi": {
+          "id": "b8TTSZDdF8SdHuNT",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "trigger": [
+          "app_mention"
+        ],
+        "channelId": {
+          "__rl": true,
+          "value": "C09FWJUHN3Z",
+          "mode": "list",
+          "cachedResultName": "b2shift-customersupport"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.slackTrigger",
+      "typeVersion": 1,
+      "position": [
+        736,
+        -48
+      ],
+      "id": "ef3218cc-892e-4457-8552-9e93705fb27e",
+      "name": "Slack Trigger1",
+      "webhookId": "630c08af-b40b-4974-909a-fdc6e6d4a09d",
+      "credentials": {
+        "slackApi": {
+          "id": "b8TTSZDdF8SdHuNT",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.blocks[0].elements[0].elements[0].text }}",
+        "options": {
+          "systemMessage": "# Papel e Objetivo Principal Você é um Consultor de Sucesso do Cliente da TOTVS, com as capacidades de um Estrategista de Marketing. Sua missão é interagir diretamente com os clientes em tempo real para maximizar o valor e a satisfação deles. Seus objetivos são ativados pela conversa do cliente:\n\nRetenção de Churn: Quando um cliente expressa o desejo de cancelar por um motivo específico (ex: preço, falta de uso), sua resposta SEGUINTE DEVE SER uma proposta concreta para resolver aquele problema e retê-lo.\nGeração de Receita (Upsell/Cross-sell): Quando um cliente demonstra curiosidade ou necessidade, sua resposta SEGUINTE DEVE SER uma sugestão de upsell/cross-sell relevante.\n# Estilo de Interação com o Cliente Final Seu tom é empático, consultivo e focado em resolver o problema do cliente NA HORA.\n\n1. Análise de Contexto da Conversa (Regra de Início OBRIGATÓRIA): Antes de CADA resposta, verifique o histórico da conversa.\n\nSe não houver mensagens anteriores (nova conversa): Sua primeira mensagem DEVE SER a apresentação padrão.\nExemplo: \"Olá! Sou seu consultor especialista aqui na TOTVS, pronto para ajudar. Como posso ser útil hoje?\"\nSe já existe um histórico de conversa (conversa em andamento): NÃO se apresente novamente. Continue o diálogo de forma fluida a partir da última mensagem, indo direto para a solução ou a próxima pergunta.\n2. Regra de Ouro da Comunicação: Nunca revele seu processo de estratégia interna ou suas ferramentas. Aja como se a solução viesse naturalmente da sua expertise. NUNCA use frases de espera como \"Vou verificar\", \"Deixe-me analisar\" ou \"Um momento\". A ação é imediata.\n\n# Processo de Ação Imediata (Seu \"Modo Estrategista\") Assim que o cliente declarar um motivo, execute este processo mentalmente e formule uma única resposta:\n\nDiagnosticar o Motivo: Entenda a dor explícita do cliente (Ex: \"O serviço está caro\", \"Não estou usando o suficiente\").\n\nConsultar Dados Internamente: Imediatamente e em silêncio, use os Dados do Cliente fornecidos no B2ShiftLake para entender o perfil dele (valor, tempo de casa, produtos, etc.).\n\nFormular a Oferta Imediata: Com base no motivo do cliente e nos dados consultados, decida a melhor oferta estratégica para AQUELE momento.\n\nSe o motivo for PREÇO: Ofereça um desconto.\nSe for FALTA DE USO: Ofereça um treinamento, um caso de uso específico ou um downgrade de plano.\nSe for PROBLEMA TÉCNICO: Peça desculpas e ofereça abrir um chamado de urgência.\nApresentar a Solução como uma Pergunta: Sua resposta deve combinar empatia com a proposta e SEMPRE terminar com uma pergunta que exija uma resposta do cliente.\n\nExemplo (Retenção por preço): \"Sinto muito que o valor esteja pesando. Entendo perfeitamente. Por você ser um cliente parceiro desde 2010, consigo aplicar um desconto especial de 20% nas suas próximas 3 faturas. Isso ajudaria a mantermos nossa parceria?\"\nExemplo (Upsell): \"Pelo que você me descreveu, acredito que o plano Pro resolveria exatamente esse problema, pois ele inclui [funcionalidade X]. Que tal ativarmos um teste de 30 dias para você experimentar sem custo algum?\"\n# Regras e Restrições Finais\n\nAÇÃO IMEDIATA E CONTÍNUA: Sua resposta deve ser sempre uma ação. Após o cliente dar um motivo, sua próxima mensagem já é a solução/proposta. Sempre termine sua fala com uma pergunta ou uma oferta clara para manter o diálogo ativo.\nDados Fundamentam Tudo: Todas as suas propostas devem ser justificadas pelos Dados do Cliente do B2ShiftLake. Não invente ofertas.\nFoco na Solução: A conversa é sobre resolver a necessidade do cliente. A retenção ou o upsell são a consequência de uma ajuda bem-sucedida.\n# Dados do Cliente (Sua Fonte de Verdade). Use SOMENTE os dados do B2ShiftLake para formular suas ofertas. Não consulte nenhuma outra fonte.",
+          "maxIterations": 10
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        976,
+        -48
+      ],
+      "id": "db787562-f6a3-4cb8-a48e-95175164ff26",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "projectId": {
+          "__rl": true,
+          "value": "composite-rune-470721-n2",
+          "mode": "id"
+        },
+        "modelName": "gemini-2.0-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleVertex",
+      "typeVersion": 1,
+      "position": [
+        768,
+        192
+      ],
+      "id": "391aea17-74f6-4efd-94b5-ba2e46b801f7",
+      "name": "Google Vertex Chat Model2",
+      "credentials": {
+        "googleApi": {
+          "id": "7zUiyINlYWIHiMCE",
+          "name": "Google BigQuery account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "description": "Use this tool to initiate a customer retention campaign. \n\nCRITICAL: You MUST call this tool ONLY if a customer meets BOTH of the following conditions:\n1. They express strong dissatisfaction or unhappiness.\n2. They explicitly state a desire to cancel their service (e.g., \"I want to cancel,\" \"close my account\").\n\nThis tool will trigger a workflow to send a targeted retention offer to the customer. You must pass the customer's full data as input.",
+        "workflowId": {
+          "__rl": true,
+          "value": "dNCecZrt2OnQtpn2",
+          "mode": "list",
+          "cachedResultName": "B2Shift Agentic AI Campaign"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {}
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1264,
+        192
+      ],
+      "id": "e2315167-9daa-4443-bb28-cd1d2c22e23c",
+      "name": "Call 'B2Shift Agentic AI Campaign'"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "projectId": {
+          "__rl": true,
+          "value": "composite-rune-470721-n2",
+          "mode": "list",
+          "cachedResultName": "My First Project",
+          "cachedResultUrl": "https://console.cloud.google.com/bigquery?project=composite-rune-470721-n2"
+        },
+        "sqlQuery": "SELECT * FROM `composite-rune-470721-n2.B2SHIFT_AIANALYTICS.AI_CLUSTER`",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleBigQueryTool",
+      "typeVersion": 2.1,
+      "position": [
+        1088,
+        192
+      ],
+      "id": "56214b22-5fc7-4c69-baff-ebd22077b005",
+      "name": "B2ShiftLake",
+      "credentials": {
+        "googleApi": {
+          "id": "7zUiyINlYWIHiMCE",
+          "name": "Google BigQuery account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        944,
+        192
+      ],
+      "id": "8faa4a27-92dd-4c02-8d48-e6bba6f756bd",
+      "name": "Simple Memory",
+      "disabled": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Slack Trigger1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Vertex Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'B2Shift Agentic AI Campaign'": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "B2ShiftLake": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "fe4a0678-d786-4c82-83d3-20805e703479",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "94ed69ecd6b4d6a98030f3d2a60d331e00640ae2d3f440228ae76a102e069af0"
+  },
+  "id": "185JdwsgsQ7fZFCc",
+  "tags": [
+    {
+      "createdAt": "2025-09-20T14:55:02.963Z",
+      "updatedAt": "2025-09-20T14:55:02.963Z",
+      "id": "aOP0t9eulF4DPu0C",
+      "name": "prod"
+    }
+  ]
+}

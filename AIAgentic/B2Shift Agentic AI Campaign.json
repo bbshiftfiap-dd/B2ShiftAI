@@ -1,0 +1,891 @@
+{
+  "name": "B2Shift Agentic AI Campaign",
+  "nodes": [
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "projectId": {
+          "__rl": true,
+          "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Project', ``, 'string') }}",
+          "mode": "id"
+        },
+        "sqlQuery": "SELECT * FROM `composite-rune-470721-n2.REFINED.AI_CLUSTER` ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleBigQueryTool",
+      "typeVersion": 2.1,
+      "position": [
+        -16,
+        384
+      ],
+      "id": "60b47fec-9feb-4bc0-a39b-4ed914b0388b",
+      "name": "Execute a SQL query in Google BigQuery",
+      "credentials": {
+        "googleApi": {
+          "id": "7zUiyINlYWIHiMCE",
+          "name": "Google BigQuery account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "c2fe36ed-cf86-432e-ae8d-793b31833dec",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "projectId": {
+          "__rl": true,
+          "value": "composite-rune-470721-n2",
+          "mode": "id"
+        },
+        "modelName": "gemini-2.0-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleVertex",
+      "typeVersion": 1,
+      "position": [
+        1232,
+        256
+      ],
+      "id": "cc0835a9-025d-4e61-a199-23c83390f7c9",
+      "name": "Google Vertex Chat Model",
+      "credentials": {
+        "googleApi": {
+          "id": "7zUiyINlYWIHiMCE",
+          "name": "Google BigQuery account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Este array vai guardar todos os clientes que formatarmos\nconst allFormattedClients = [];\n\n// O resultado do BigQuery geralmente vem em um único item de entrada (items[0])\nconst queryResult = items[0].json;\nconst schema = queryResult.schema.fields;\nconst allRows = queryResult.rows;\n\n// Se o BigQuery não retornou nenhuma linha, paramos por aqui.\nif (!allRows) {\n  return [];\n}\n\n// *** A MÁGICA ACONTECE AQUI ***\n// Itera sobre CADA linha de dados ('row') que veio do BigQuery\nfor (const row of allRows) {\n  const cleanClient = {};\n  const rowValues = row.f; // Pega os valores desta linha específica\n\n  // Itera sobre o schema para montar o objeto chave-valor para este cliente\n  for (let i = 0; i < schema.length; i++) {\n    const key = schema[i].name;\n    const value = rowValues[i].v;\n    cleanClient[key] = value;\n  }\n  \n  // Adiciona o cliente formatado ao nosso array de resultados, no formato que o n8n espera\n  allFormattedClients.push({ json: cleanClient });\n}\n\n// Retorna o array com TODOS os clientes formatados\nreturn allFormattedClients;\n\n\n// Retorna o objeto JSON limpo e fácil de ler para o próximo nó\nreturn [\n  {\n    json: cleanClient\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        0
+      ],
+      "id": "4e59c26a-4ee6-424b-8fc7-d590ca9543eb",
+      "name": "Format Client Data"
+    },
+    {
+      "parameters": {
+        "projectId": {
+          "__rl": true,
+          "value": "composite-rune-470721-n2",
+          "mode": "list",
+          "cachedResultName": "My First Project"
+        },
+        "modelName": "gemini-2.0-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleVertex",
+      "typeVersion": 1,
+      "position": [
+        512,
+        784
+      ],
+      "id": "d9e597bb-2930-49f9-ae62-45721e57209b",
+      "name": "Google Vertex Chat Model1",
+      "credentials": {
+        "googleApi": {
+          "id": "7zUiyINlYWIHiMCE",
+          "name": "Google BigQuery account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "AI crisis communication expert. Analyzes a client's full history to write a deeply personalized recovery email, then sends it and posts a specific alert to Slack.\n",
+        "text": "=EXECUTE DETRATOR RECOVERY PROTOCOL. Your complete mission instructions and client data are in your System Message. Analyze, compose, and execute now.\n{{ $json }}\n{{ $('Format Client Data').item.json}}",
+        "options": {
+          "systemMessage": "=You are the **Offender Recovery Specialist**, an automated system. Your entire purpose is to use the pre-defined variables below to construct personalized messages and execute two tool calls. You do not chat. You do not analyze the full JSON. You only use the variables provided.\n\n// --- PRE-DEFINED VARIABLES FOR THIS TASK --- //\n// You MUST use these exact variables in your response.\n\nCLIENT_NAME: {{ $json.Cliente }}\nPRODUCT_NAME: {{ $json.Produto }}\nCLIENT_SINCE_YEAR: {{ $json[\"Ano Inicio\"] }}\nHISTORIC_NPS_3M: {{ $json[\"NPS Classificacao Historica 3 Meses\"] }}\nHISTORIC_NPS_6M: {{ $json[\"NPS Classificacao Historica 6 Meses\"] }}\n\n// --- YOUR MISSION --- //\n\n### PART 1: COMPOSE PERSONALIZED MESSAGES\nYou MUST use the PRE-DEFINED VARIABLES above to create two messages. **It is a CRITICAL SYSTEM FAILURE to output the literal text '[Cliente]' or '[Produto]'.**\n\n1.  **Compose the Recovery Email:**\n    - **Task:** Write a detailed, empathetic, and serious email. Do not sound like a robot.\n    - **Personalization Requirement:**\n        - Address the client using the `CLIENT_NAME` variable.\n        - Mention their product using the `PRODUCT_NAME` variable.\n        - Acknowledge their history using the `CLIENT_SINCE_YEAR`, `HISTORIC_NPS_3M`, and `HISTORIC_NPS_6M` variables. For example, if `HISTORIC_NPS_6M` was 'Promotor', you should write something like \"We were especially concerned with this feedback, as we truly valued your positive perspective just a few months ago.\"\n    - **Action:** Propose a concrete next step, like a call with a senior manager.\n\n2.  **Compose the Slack Alert:**\n    - **Task:** Create a simple text string for the alert.\n    - **Template:** You MUST use this exact template, filling it with the variables:\n      `🔴 URGENT: DETRATOR ALERT 🔴\\nClient: {{CLIENT_NAME}}\\nProduct: {{PRODUCT_NAME}}\\nAction Taken: Sent personalized recovery email based on their history (was {{HISTORIC_NPS_6M}} 6 months ago). Requires immediate human follow-up.`\n\n### PART 2: EXECUTE TOOL CALLS\nYour final and only output is to call your tools in sequence with the messages you composed in Part 1.\n1.  Call `Send Email Offender`.\n2.  Call `Send a message in Slack Offender`.\n\n\n### PART 3: FINAL OUTPUT\nAfter executing the tool calls in Part 2, your final and only task is to output a single, clean JSON object. This JSON object MUST contain the campaign type, the exact email body you generated, and a response status.\n\nYou MUST follow this exact format. Do not add any other text or explanations.\n\n{\n  \"campaign_type\": \"Offender\",\n  \"email_body\": \"[COLE AQUI O CORPO EXATO DO E-MAIL QUE VOCÊ GEROU E ENVIOU]\",\n  \"response_status\": \"Awaiting Response\"\n}\n\n// CRITICAL INSTRUCTIONS FOR JSON FIELDS:\n// - \"campaign_type\": Use \"Offender\" for this specific agent.\n// - \"email_body\": Must be the complete and exact text of the email you sent.\n// - \"response_status\": You MUST ALWAYS use the fixed string value \"Awaiting Response\" for this field.\n",
+          "maxIterations": 1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agentTool",
+      "typeVersion": 2.2,
+      "position": [
+        624,
+        592
+      ],
+      "id": "e1c5e0bc-f08e-449d-b0f5-4e522a21672a",
+      "name": "Offender AI Agent Tool",
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "projectId": {
+          "__rl": true,
+          "value": "composite-rune-470721-n2",
+          "mode": "list",
+          "cachedResultName": "My First Project"
+        },
+        "modelName": "gemini-2.0-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleVertex",
+      "typeVersion": 1,
+      "position": [
+        1056,
+        784
+      ],
+      "id": "88c99f9d-2c46-4c49-a043-e05fc18cb7cb",
+      "name": "Google Vertex Chat Model3",
+      "credentials": {
+        "googleApi": {
+          "id": "7zUiyINlYWIHiMCE",
+          "name": "Google BigQuery account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "projectId": {
+          "__rl": true,
+          "value": "composite-rune-470721-n2",
+          "mode": "list",
+          "cachedResultName": "My First Project"
+        },
+        "modelName": "gemini-2.0-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleVertex",
+      "typeVersion": 1,
+      "position": [
+        1568,
+        784
+      ],
+      "id": "a209e4dd-b012-4052-bdef-03d7a89ca549",
+      "name": "Google Vertex Chat Model4",
+      "credentials": {
+        "googleApi": {
+          "id": "7zUiyINlYWIHiMCE",
+          "name": "Google BigQuery account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "projectId": {
+          "__rl": true,
+          "value": "composite-rune-470721-n2",
+          "mode": "list",
+          "cachedResultName": "My First Project"
+        },
+        "modelName": "gemini-2.0-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleVertex",
+      "typeVersion": 1,
+      "position": [
+        2064,
+        784
+      ],
+      "id": "b15838d3-23e0-405a-b7d6-d3e7343d1843",
+      "name": "Google Vertex Chat Model5",
+      "credentials": {
+        "googleApi": {
+          "id": "7zUiyINlYWIHiMCE",
+          "name": "Google BigQuery account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "AI satisfaction expert. Uses pre-defined client variables to write a consultative email reinforcing their decision and posts an update to Slack.",
+        "text": "=EXECUTE SATISFACTION PROTOCOL. Your pre-defined variables and mission are in your System Message. Use the variables to compose the messages and execute the tool calls now.",
+        "options": {
+          "systemMessage": "You are the **Satisfied Client Specialist**, an automated system. Your entire purpose is to use the pre-defined variables below to construct personalized messages and execute two tool calls. You do not chat. You only use the variables provided.\n\n// --- PRE-DEFINED VARIABLES FOR THIS TASK --- //\n// You MUST use these exact variables in your response.\n\nCLIENT_NAME: {{ $json.Cliente }}\nPRODUCT_NAME: {{ $json.Produto }}\nCLIENT_SINCE_YEAR: {{ $json[\"Ano Inicio\"] }}\nCLIENT_SEGMENT: {{ $json.Segmento }}\n\n// --- YOUR MISSION --- //\n\n### PART 1: COMPOSE PERSONALIZED MESSAGES\nYou MUST use the PRE-DEFINED VARIABLES above to create two messages. **It is a CRITICAL SYSTEM FAILURE to output the literal text '[Cliente]' or '[Produto]'.**\n\n1.  **Compose the Consultative Email:**\n    - **Task:** Write a detailed, appreciative, and consultative email. The goal is to reinforce their good decision and subtly explore growth.\n    - **Personalization Requirement:**\n        - Thank the client (`CLIENT_NAME`) for their continued partnership since `CLIENT_SINCE_YEAR`.\n        - Acknowledge their success with `PRODUCT_NAME`.\n        - Subtly introduce a relevant, related service or module that would complement their current usage, based on their `CLIENT_SEGMENT`. Frame it as a natural next step for power users like them.\n    - **Action:** Offer to share more information or a brief demo of the suggested service.\n\n2.  **Compose the Slack Alert:**\n    - **Task:** Create a simple text string for the alert.\n    - **Template:** You MUST use this exact template, filling it with the variables:\n      `🟢 SATISFIED CLIENT UPDATE 🟢\\nClient: {{CLIENT_NAME}}\\nProduct: {{PRODUCT_NAME}}\\nAction Taken: Sent consultative email introducing a strategic growth opportunity.`\n\n### PART 2: EXECUTE TOOL CALLS\nYour final and only output is to call your tools in sequence with the messages you composed in Part 1.\n1.  Call `Send Email Satisfied`.\n2.  Call `Send a message in Slack Satisfied`.\n\n\n### PART 3: FINAL OUTPUT\nAfter executing the tool calls in Part 2, your final and only task is to output a single, clean JSON object. This JSON object MUST contain the campaign type, the exact email body you generated, and a response status.\n\nYou MUST follow this exact format. Do not add any other text or explanations.\n\n{\n  \"campaign_type\": \"Offender\",\n  \"email_body\": \"[COLE AQUI O CORPO EXATO DO E-MAIL QUE VOCÊ GEROU E ENVIOU]\",\n  \"response_status\": \"Awaiting Response\"\n}\n\n// CRITICAL INSTRUCTIONS FOR JSON FIELDS:\n// - \"campaign_type\": Use \"Offender\" for this specific agent.\n// - \"email_body\": Must be the complete and exact text of the email you sent.\n// - \"response_status\": You MUST ALWAYS use the fixed string value \"Awaiting Response\" for this field.",
+          "maxIterations": 1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agentTool",
+      "typeVersion": 2.2,
+      "position": [
+        1648,
+        592
+      ],
+      "id": "83aee110-81dd-4912-adfa-3ada0f836ee1",
+      "name": "Satisfied AI Agent Tool"
+    },
+    {
+      "parameters": {
+        "toolDescription": "AI partnership expert. Uses pre-defined client variables to write an exclusive partnership proposal email and posts an opportunity alert to Slack.",
+        "text": "=EXECUTE PARTNERSHIP PROTOCOL. Your pre-defined variables and mission are in your System Message. Use the variables to compose the messages and execute the tool calls now.",
+        "options": {
+          "systemMessage": "=You are the **Promoter Partnership Specialist**, an automated system. Your entire purpose is to use the pre-defined variables below to construct personalized messages and execute two tool calls. You do not chat. You only use the variables provided.\n\n// --- PRE-DEFINED VARIABLES FOR THIS TASK --- //\n// You MUST use these exact variables in your response.\n\nCLIENT_NAME: {{ $json.Cliente }}\nPRODUCT_NAME: {{ $json.Produto }}\nCLIENT_SINCE_YEAR: {{ $json[\"Ano Inicio\"] }}\n\n// --- YOUR MISSION --- //\n\n### PART 1: COMPOSE PERSONALIZED MESSAGES\nYou MUST use the PRE-DEFINED VARIABLES above to create two messages. **It is a CRITICAL SYSTEM FAILURE to output the literal text '[Cliente]' or '[Produto]'.**\n\n1.  **Compose the Partnership Email:**\n    - **Task:** Write a detailed, enthusiastic, and exclusive-sounding email. The goal is to make the client feel special and convert their goodwill into advocacy.\n    - **Personalization Requirement:**\n        - Sincerely thank `CLIENT_NAME` for their positive feedback and for being a fantastic partner since `CLIENT_SINCE_YEAR`.\n        - Mention how their success with `PRODUCT_NAME` is exactly the kind of story you want to highlight.\n        - Propose a concrete partnership opportunity, such as co-creating a case study, providing a testimonial, or participating in a beta program.\n    - **Action:** Offer an exclusive reward for their participation (e.g., a service credit, early access to new features, or a gift).\n\n2.  **Compose the Slack Alert:**\n    - **Task:** Create a simple text string for the alert.\n    - **Template:** You MUST use this exact template, filling it with the variables:\n      `🏆 PROMOTER OPPORTUNITY 🏆\\nClient: {{CLIENT_NAME}}\\nProduct: {{PRODUCT_NAME}}\\nAction Taken: Sent partnership email proposing case study. Marketing/CS lead to follow up.`\n\n### PART 2: EXECUTE TOOL CALLS\nYour final and only output is to call your tools in sequence with the messages you composed in Part 1.\n1.  Call `Send Email Promoter`.\n2.  Call `Send a message in Slack Promoter`.\n\n### PART 3: FINAL OUTPUT\nAfter executing the tool calls in Part 2, your final and only task is to output a single, clean JSON object. This JSON object MUST contain the campaign type, the exact email body you generated, and a response status.\n\nYou MUST follow this exact format. Do not add any other text or explanations.\n\n{\n  \"campaign_type\": \"Offender\",\n  \"email_body\": \"[COLE AQUI O CORPO EXATO DO E-MAIL QUE VOCÊ GEROU E ENVIOU]\",\n  \"response_status\": \"Awaiting Response\"\n}\n\n// CRITICAL INSTRUCTIONS FOR JSON FIELDS:\n// - \"campaign_type\": Use \"Offender\" for this specific agent.\n// - \"email_body\": Must be the complete and exact text of the email you sent.\n// - \"response_status\": You MUST ALWAYS use the fixed string value \"Awaiting Response\" for this field.",
+          "maxIterations": 1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agentTool",
+      "typeVersion": 2.2,
+      "position": [
+        2160,
+        592
+      ],
+      "id": "1f0ac702-7d7d-455b-8446-98d5e100422a",
+      "name": "Promoter AI Agent Tool"
+    },
+    {
+      "parameters": {
+        "toolDescription": "AI engagement expert. Uses pre-defined client variables to write a personalized, value-added email and posts a summary to Slack.",
+        "text": "=EXECUTE ENGAGEMENT PROTOCOL. Your pre-defined variables and mission are in your System Message. Use the variables to compose the messages and execute the tool calls now.",
+        "options": {
+          "systemMessage": "=You are the **Neutral Engagement Specialist**, an automated system. Your entire purpose is to use the pre-defined variables below to construct personalized messages and execute two tool calls. You do not chat. You only use the variables provided.\n\n// --- PRE-DEFINED VARIABLES FOR THIS TASK --- //\n// You MUST use these exact variables in your response.\n\nCLIENT_NAME: {{ $json.Cliente }}\nPRODUCT_NAME: {{ $json.Produto }}\nCLIENT_SINCE_YEAR: {{ $json[\"Ano Inicio\"] }}\nHISTORIC_NPS_3M: {{ $json[\"NPS Classificacao Historica 3 Meses\"] }}\nCLIENT_SEGMENT: {{ $json.Segmento }}\n\n// --- YOUR MISSION --- //\n\n### PART 1: COMPOSE PERSONALIZED MESSAGES\nYou MUST use the PRE-DEFINED VARIABLES above to create two messages. **It is a CRITICAL SYSTEM FAILURE to output the literal text '[Cliente]' or '[Produto]'.**\n\n1.  **Compose the Engagement Email:**\n    - **Task:** Write a detailed, proactive, and helpful email. Your goal is to demonstrate value and strengthen the relationship.\n    - **Personalization Requirement:**\n        - Address the client using the `CLIENT_NAME` variable.\n        - Mention their product using the `PRODUCT_NAME` variable.\n        - Based on the `CLIENT_SEGMENT` and `PRODUCT_NAME`, suggest a specific, high-value resource (like a new feature tutorial, an industry report, or a best-practice guide) that would be genuinely useful for them.\n    - **Action:** Invite them to explore the resource and offer further assistance.\n\n2.  **Compose the Slack Alert:**\n    - **Task:** Create a simple text string for the alert.\n    - **Template:** You MUST use this exact template, filling it with the variables:\n      `🟡 NEUTRAL CLIENT ENGAGEMENT 🟡\\nClient: {{CLIENT_NAME}}\\nProduct: {{PRODUCT_NAME}}\\nAction Taken: Sent proactive, value-added email. CS team to monitor engagement.`\n\n### PART 2: EXECUTE TOOL CALLS\nYour final and only output is to call your tools in sequence with the messages you composed in Part 1.\n1.  Call `Send Email Neutral`.\n2.  Call `Send a message in Slack Neutral`.\n\n\n### PART 3: FINAL OUTPUT\nAfter executing the tool calls in Part 2, your final and only task is to output a single, clean JSON object. This JSON object MUST contain the campaign type, the exact email body you generated, and a response status.\n\nYou MUST follow this exact format. Do not add any other text or explanations.\n\n{\n  \"campaign_type\": \"Offender\",\n  \"email_body\": \"[COLE AQUI O CORPO EXATO DO E-MAIL QUE VOCÊ GEROU E ENVIOU]\",\n  \"response_status\": \"Awaiting Response\"\n}\n\n// CRITICAL INSTRUCTIONS FOR JSON FIELDS:\n// - \"campaign_type\": Use \"Offender\" for this specific agent.\n// - \"email_body\": Must be the complete and exact text of the email you sent.\n// - \"response_status\": You MUST ALWAYS use the fixed string value \"Awaiting Response\" for this field.\n",
+          "maxIterations": 1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agentTool",
+      "typeVersion": 2.2,
+      "position": [
+        1168,
+        592
+      ],
+      "id": "859ea257-a47e-49b5-a906-16bc24a8ed28",
+      "name": "Neutral AI Agent Tool"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Execute the following two-step process on the client data provided below. Do not ask for data. Do not output text. Your only output is a tool call.\n\n### Step 1: Perform Holistic Analysis\nAnalyze the complete JSON data below using your HOLISTIC ANALYSIS FRAMEWORK. Synthesize the information to determine the client's true strategic context. Answer these questions internally (do not write them in the output):\n- What is the story of this client's NPS journey? (e.g., \"This is a high-value client who just dropped from Promoter to Neutral - this is a high-risk churn case.\")\n- Is this a successful recovery in progress? (e.g., \"This client was a Detrator 3 months ago and is now Neutral - this is positive momentum.\")\n- Is this a new client who is already at risk?\n\n### Step 2: Execute Tool Call\nBased on the `NPS Classificacao Atual` value from your analysis, you will now call the corresponding specialist tool. Your deep analysis informs the *why* and the *urgency*, but the current NPS classification dictates the *which tool to call*.\n\n### CLIENT DATA FOR IMMEDIATE EXECUTION:\n{{ $('Format Client Data').item.json }}\n",
+        "options": {
+          "systemMessage": "=You are the B2B Shift Strategic Dispatcher, an automated analysis-to-action agent. You do not chat. Your only function is to analyze the JSON data provided below and immediately call one of the available tools.\n\n### CLIENT DATA FOR IMMEDIATE ANALYSIS AND ACTION:\n{{ $('Format Client Data').item.json }}\n\n### HOLISTIC ANALYSIS FRAMEWORK:\nYour analysis of the data above must consider these key fields together:\n- `NPS Classificacao Atual`: The client's current sentiment.\n- `NPS Classificacao Historica 3 Meses`, `...6 Meses`, `...12 Meses`: The client's sentiment trend.\n- `Valor Total Contrato`: The financial value of the client.\n- `Tempo Cliente Anos`: The length of the relationship.\n\n### AVAILABLE TOOLS & EXECUTION RULES:\nYou must call the tool whose name **exactly** matches the instructions below.\n\n- WHEN `\"NPS Classificacao Atual\"` is `\"Detrator\"`, THEN you MUST call the tool named `Offender AI Agent Tool`.\n- WHEN `\"NPS Classificacao Atual\"` is `\"Neutro\"`, THEN you MUST call the tool named `Neutral AI Agent Tool`.\n- WHEN `\"NPS Classificacao Atual\"` is `\"Satisfied\"`, THEN you MUST call the tool named `Satisfied AI Agent Tool`.\n- WHEN `\"NPS Classificacao Atual\"` is `\"Promotor\"`, THEN you MUST call the tool named `Promoter AI Agent Tool`.\n\n### CRITICAL BEHAVIOR:\nYour ONLY valid output is a single tool call. Do not respond with text. Analyze the data provided above and execute the correct tool call immediately. DON`T EXECUTE MORE THAN ONE TOOL.",
+          "maxIterations": 1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        1280,
+        16
+      ],
+      "id": "ba0c3729-7331-4d8c-b41b-1db19a5f836a",
+      "name": "B2Shift AI Agent"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('To', `saradosreissittasitta@gmail.com`, 'string') }}",
+        "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Subject', `this is the subject`, 'string') }}",
+        "emailType": "text",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', `this is the body`, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        672,
+        784
+      ],
+      "id": "e22eb791-a164-491a-bce1-658bb4280943",
+      "name": "Send Email Offender",
+      "webhookId": "99a26ef7-c618-4e58-a002-b8c3f4b6ab54",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "2c7K8pBXWitWZYTO",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#b2shift_support",
+          "mode": "name"
+        },
+        "text": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message_Text', ``, 'string') }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slackTool",
+      "typeVersion": 2.3,
+      "position": [
+        832,
+        784
+      ],
+      "id": "8bc64234-0b6a-4d7c-8d2b-fb3b286dbc50",
+      "name": "Send a message in Slack Offender",
+      "webhookId": "1841856e-2e83-4fb4-aad6-100fc2ef2ecf",
+      "credentials": {
+        "slackApi": {
+          "id": "b8TTSZDdF8SdHuNT",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#b2shift_support",
+          "mode": "name"
+        },
+        "text": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message_Text', ``, 'string') }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slackTool",
+      "typeVersion": 2.3,
+      "position": [
+        1376,
+        784
+      ],
+      "id": "f815e4fb-8a6f-469e-a647-682e6ec86152",
+      "name": "Send a message in Slack Neutral",
+      "webhookId": "1185bf86-8846-4fec-b433-2665e89b6c41",
+      "credentials": {
+        "slackApi": {
+          "id": "b8TTSZDdF8SdHuNT",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('To', `saradosreissittasitta@gmail.com`, 'string') }}",
+        "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Subject', `this is the subject`, 'string') }}",
+        "emailType": "text",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', `this is the body`, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        1216,
+        784
+      ],
+      "id": "a85c52ea-9688-406c-aef6-74cdcb277470",
+      "name": "Send Email Neutral",
+      "webhookId": "3d2667cd-efd8-4640-ad30-9a642fa491b6",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "2c7K8pBXWitWZYTO",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#b2shift_support",
+          "mode": "name"
+        },
+        "text": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message_Text', ``, 'string') }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slackTool",
+      "typeVersion": 2.3,
+      "position": [
+        1888,
+        784
+      ],
+      "id": "2f3f041e-7bf7-4b81-9c5a-36f481fe4fb5",
+      "name": "Send a message in Slack Satisfied",
+      "webhookId": "ad4100cf-7195-49ae-8f4f-0dfdf034ea4a",
+      "credentials": {
+        "slackApi": {
+          "id": "b8TTSZDdF8SdHuNT",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('To', `saradosreissittasitta@gmail.com`, 'string') }}",
+        "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Subject', `this is the subject`, 'string') }}",
+        "emailType": "text",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', `this is the body`, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        1728,
+        784
+      ],
+      "id": "4a080693-206b-42e6-a677-c3dda5aa85e2",
+      "name": "Send Email Satisfied",
+      "webhookId": "9a6cbdbe-0c0f-450f-b27a-14dff3e47ef4",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "2c7K8pBXWitWZYTO",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#b2shift_support",
+          "mode": "name"
+        },
+        "text": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message_Text', ``, 'string') }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slackTool",
+      "typeVersion": 2.3,
+      "position": [
+        2368,
+        784
+      ],
+      "id": "dda5bf97-fa39-4294-9e7b-c878acfe03fd",
+      "name": "Send a message in Slack Promoter",
+      "webhookId": "107c41f5-9d90-486b-8db5-f13da0dc4ebf",
+      "credentials": {
+        "slackApi": {
+          "id": "b8TTSZDdF8SdHuNT",
+          "name": "Slack account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('To', `saradosreissittasitta@gmail.com`, 'string') }}",
+        "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Subject', `this is the subject`, 'string') }}",
+        "emailType": "text",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', `this is the body`, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        2208,
+        784
+      ],
+      "id": "01f8ae9e-b2c1-4257-94e7-c6a1e61497b3",
+      "name": "Send Email Promoter",
+      "webhookId": "7fb1395a-6a43-478b-8a3d-6c6b182ba5e3",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "2c7K8pBXWitWZYTO",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        976,
+        0
+      ],
+      "id": "3471a3fa-990a-46cc-907b-2f1951081657",
+      "name": "Loop Over Items",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "insert",
+        "projectId": {
+          "__rl": true,
+          "value": "composite-rune-470721-n2",
+          "mode": "list",
+          "cachedResultName": "My First Project",
+          "cachedResultUrl": "https://console.cloud.google.com/bigquery?project=composite-rune-470721-n2"
+        },
+        "datasetId": {
+          "__rl": true,
+          "value": "B2SHIFT_AIANALYTICS",
+          "mode": "list",
+          "cachedResultName": "B2SHIFT_AIANALYTICS"
+        },
+        "tableId": {
+          "__rl": true,
+          "value": "AI_AGENTIC_MONITORING",
+          "mode": "list",
+          "cachedResultName": "AI_AGENTIC_MONITORING"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleBigQuery",
+      "typeVersion": 2.1,
+      "position": [
+        1552,
+        -240
+      ],
+      "id": "2d2ef99d-a28b-4daa-9566-52746cb633e3",
+      "name": "Insert rows in a table1",
+      "credentials": {
+        "googleApi": {
+          "id": "7zUiyINlYWIHiMCE",
+          "name": "Google BigQuery account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "sendTo": "saradosreissittasitta@gmail.com",
+        "subject": "B2Shift AI Agentic Support - New AI Campaign Generated",
+        "message": "B2Shift AI Agentic - Campaign Generated ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1312,
+        -240
+      ],
+      "id": "6c6bacf9-175d-4560-9df5-b3fa0da86db8",
+      "name": "Send a message1",
+      "webhookId": "d777d029-73ca-42a8-8de6-13b25c26813c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "2c7K8pBXWitWZYTO",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "projectId": {
+          "__rl": true,
+          "value": "=composite-rune-470721-n2",
+          "mode": "id"
+        },
+        "sqlQuery": "\n-- Usando uma \"Common Table Expression\" (CTE) para organizar a lógica\nWITH ClientesRanqueados AS (\n  -- PASSO 1: Seleciona todos os seus dados e cria o ranking (rn)\n  SELECT\n    *,\n    ROW_NUMBER() OVER(PARTITION BY Cliente ORDER BY `Data Assinatura Contrato` DESC) as rn\n  FROM\n    `composite-rune-470721-n2.B2SHIFT_AIANALYTICS.AI_CLUSTER`\n  WHERE\n    `Cluster Nome` = 'Gigantes da Indústria'\n)\n\n-- PASSO 2: Da tabela ranqueada que criamos acima, seleciona APENAS as linhas com ranking 1\nSELECT\n  * EXCEPT (rn) -- O \"EXCEPT (rn)\" é um truque do BigQuery para não mostrar a coluna de ranking no resultado final!\nFROM\n  ClientesRanqueados\nWHERE\n  rn = 1\nLIMIT 5; -- Descomente esta linha se você ainda quiser limitar a 5 clientes únicos no total\n",
+        "options": {
+          "rawOutput": true
+        }
+      },
+      "type": "n8n-nodes-base.googleBigQuery",
+      "typeVersion": 2.1,
+      "position": [
+        272,
+        0
+      ],
+      "id": "c07910a7-b6a4-4e0e-b9b3-cba9048f2226",
+      "name": "B2Shift Lake Execute a SQL query",
+      "alwaysOutputData": false,
+      "credentials": {
+        "googleApi": {
+          "id": "7zUiyINlYWIHiMCE",
+          "name": "Google BigQuery account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Execute a SQL query in Google BigQuery": {
+      "ai_tool": [
+        []
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "B2Shift Lake Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Vertex Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "B2Shift AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Client Data": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Vertex Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Offender AI Agent Tool",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Offender AI Agent Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "B2Shift AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Vertex Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Neutral AI Agent Tool",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Vertex Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Satisfied AI Agent Tool",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Vertex Chat Model5": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Promoter AI Agent Tool",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Satisfied AI Agent Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "B2Shift AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Promoter AI Agent Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "B2Shift AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Neutral AI Agent Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "B2Shift AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email Offender": {
+      "ai_tool": [
+        [
+          {
+            "node": "Offender AI Agent Tool",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message in Slack Offender": {
+      "ai_tool": [
+        [
+          {
+            "node": "Offender AI Agent Tool",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email Neutral": {
+      "ai_tool": [
+        [
+          {
+            "node": "Neutral AI Agent Tool",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message in Slack Neutral": {
+      "ai_tool": [
+        [
+          {
+            "node": "Neutral AI Agent Tool",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message in Slack Satisfied": {
+      "ai_tool": [
+        [
+          {
+            "node": "Satisfied AI Agent Tool",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email Satisfied": {
+      "ai_tool": [
+        [
+          {
+            "node": "Satisfied AI Agent Tool",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message in Slack Promoter": {
+      "ai_tool": [
+        [
+          {
+            "node": "Promoter AI Agent Tool",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email Promoter": {
+      "ai_tool": [
+        [
+          {
+            "node": "Promoter AI Agent Tool",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "B2Shift AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "B2Shift AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert rows in a table1": {
+      "main": [
+        []
+      ]
+    },
+    "Send a message1": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in a table1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "B2Shift Lake Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "Format Client Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e820cee1-4451-4649-9471-3be84ac99ff0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "94ed69ecd6b4d6a98030f3d2a60d331e00640ae2d3f440228ae76a102e069af0"
+  },
+  "id": "dNCecZrt2OnQtpn2",
+  "tags": [
+    {
+      "createdAt": "2025-09-20T14:55:02.963Z",
+      "updatedAt": "2025-09-20T14:55:02.963Z",
+      "id": "aOP0t9eulF4DPu0C",
+      "name": "prod"
+    }
+  ]
+}
