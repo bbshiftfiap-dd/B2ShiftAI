@@ -1,0 +1,732 @@
+# 🔬 AI Cluster - Machine Learning & Data Analysis
+
+Notebooks e análises avançadas de Machine Learning para clusterização de clientes B2B da plataforma B2Shift.
+
+## 📊 Visão Geral
+
+Este módulo contém implementações completas de algoritmos de Machine Learning para:
+
+- **Clusterização de Clientes**: Segmentação inteligente de clientes B2B
+- **ETL/ELT Pipelines**: Processamento e transformação de dados
+- **Feature Engineering**: Criação de features específicas para análise B2B
+- **Validação de Modelos**: Métricas robustas de avaliação
+- **Visualizações Interativas**: Gráficos e dashboards para insights
+
+## 📁 Estrutura dos Notebooks
+
+### 📓 b2shift_clustering.ipynb
+**Análise Principal de Clusterização**
+
+#### Conteúdo Detalhado:
+- **Preparação de Dados**: Limpeza e normalização
+- **Algoritmos Implementados**:
+  - K-Means com otimização automática
+  - DBSCAN para detecção de outliers
+  - Clustering Hierárquico (GMM)
+  - HDBSCAN para clusters de densidade variável
+- **Métricas de Validação**: Silhouette, Davies-Bouldin, Calinski-Harabasz
+- **Análise de Clusters**: Caracterização detalhada de cada segmento
+
+#### Algoritmos e Performance:
+
+| Algoritmo | Clusters | Silhouette | Davies-Bouldin | Calinski-Harabasz |
+|-----------|----------|------------|----------------|-------------------|
+| **K-Means** | 22 | 0.174 | 1.523 | 390.03 |
+| **GMM** | 22 | 0.183 | 1.480 | 388.94 |
+| **HDBSCAN** | 55 | 0.204 | 1.406 | 119.6 |
+
+### 📓 b2shift_etl_novo.ipynb  
+**Pipeline ETL Otimizado**
+
+#### Funcionalidades:
+- **Extração**: Múltiplas fontes de dados
+- **Transformação**: Limpeza e feature engineering
+- **Loading**: Preparação para análise
+- **Validação**: Quality checks automatizados
+- **Otimização**: Performance tuning
+
+### 📓 b2shift_etl_refined_agentic.ipynb
+**ETL Avançado com IA**
+
+#### Inovações:
+- **Auto-Feature Engineering**: IA para criação automática de features
+- **Anomaly Detection**: Detecção automática de outliers
+- **Data Quality AI**: Validação inteligente de dados
+- **Adaptive Preprocessing**: Ajuste automático de transformações
+
+## 🧮 Algoritmos de Machine Learning
+
+### 🎯 K-Means Adaptativo
+
+```python
+def adaptive_kmeans_analysis(data, max_clusters=30):
+    """
+    K-Means com determinação automática do número ideal de clusters
+    usando múltiplas métricas de validação
+    """
+    results = []
+    
+    for k in range(2, max_clusters + 1):
+        # Fit K-Means
+        kmeans = KMeans(n_clusters=k, random_state=42, n_init='auto')
+        labels = kmeans.fit_predict(data)
+        
+        # Calcular métricas
+        silhouette = silhouette_score(data, labels)
+        davies_bouldin = davies_bouldin_score(data, labels)
+        calinski = calinski_harabasz_score(data, labels)
+        
+        results.append({
+            'K': k,
+            'silhouette': silhouette,
+            'davies_bouldin': davies_bouldin,
+            'calinski_harabasz': calinski,
+            'inertia': kmeans.inertia_
+        })
+    
+    return pd.DataFrame(results)
+```
+
+**Características do Algoritmo:**
+- ✅ **Escalável**: Eficiente para grandes datasets
+- ✅ **Interpretável**: Centroides claros
+- ✅ **Determinístico**: Resultados reproduzíveis
+- ⚠️ **Limitação**: Assume clusters esféricos
+
+### 🔍 DBSCAN para Outliers
+
+```python
+def dbscan_outlier_analysis(data):
+    """
+    DBSCAN otimizado para identificação de outliers
+    em dados de clientes B2B
+    """
+    # Estimativa automática de epsilon
+    neighbors = NearestNeighbors(n_neighbors=10)
+    neighbors_fit = neighbors.fit(data)
+    distances, indices = neighbors_fit.kneighbors(data)
+    
+    # K-distance plot para otimização
+    distances = np.sort(distances, axis=0)
+    distances = distances[:, 1]
+    
+    # Knee point detection
+    knee_locator = KneeLocator(
+        range(len(distances)), distances, 
+        curve="convex", direction="increasing"
+    )
+    optimal_eps = distances[knee_locator.knee] if knee_locator.knee else 0.1
+    
+    # DBSCAN com parâmetros otimizados
+    dbscan = DBSCAN(
+        eps=optimal_eps,
+        min_samples=max(int(len(data) * 0.01), 5)
+    )
+    
+    return dbscan.fit(data)
+```
+
+**Vantagens do DBSCAN:**
+- ✅ **Outlier Detection**: Identifica pontos anômalos
+- ✅ **Flexible Shapes**: Clusters de formas arbitrárias  
+- ✅ **No K Required**: Não precisa definir número de clusters
+- ⚠️ **Sensível a Parâmetros**: eps e min_samples críticos
+
+### 🌳 Clustering Hierárquico (Gaussian Mixture)
+
+```python
+def gaussian_mixture_analysis(data, max_components=30):
+    """
+    Gaussian Mixture Model para clustering probabilístico
+    """
+    results = []
+    
+    for n_components in range(2, max_components + 1):
+        # Fit GMM
+        gmm = GaussianMixture(
+            n_components=n_components,
+            covariance_type='full',
+            random_state=42,
+            max_iter=200
+        )
+        
+        labels = gmm.fit_predict(data)
+        
+        # Métricas de avaliação
+        bic = gmm.bic(data)
+        aic = gmm.aic(data)
+        silhouette = silhouette_score(data, labels)
+        
+        results.append({
+            'components': n_components,
+            'bic': bic,
+            'aic': aic,
+            'silhouette': silhouette,
+            'log_likelihood': gmm.score(data)
+        })
+    
+    return pd.DataFrame(results)
+```
+
+**Características do GMM:**
+- ✅ **Probabilístico**: Soft clustering com probabilidades
+- ✅ **Flexible**: Diferentes formas de covariância
+- ✅ **Model Selection**: BIC/AIC para seleção de modelo
+- ⚠️ **Complexidade**: Mais parâmetros para otimizar
+
+### ⚡ HDBSCAN Avançado
+
+```python
+def hdbscan_advanced_analysis(data):
+    """
+    HDBSCAN para clustering hierárquico baseado em densidade
+    """
+    # Otimização de parâmetros
+    min_cluster_sizes = [15, 30, 45, 60, 75]
+    min_samples_range = [5, 10, 15]
+    
+    best_score = -1
+    best_params = {}
+    results = []
+    
+    for min_cluster_size in min_cluster_sizes:
+        for min_samples in min_samples_range:
+            # Fit HDBSCAN
+            hdbscan = HDBSCAN(
+                min_cluster_size=min_cluster_size,
+                min_samples=min_samples,
+                cluster_selection_epsilon=0.01
+            )
+            
+            labels = hdbscan.fit_predict(data)
+            
+            # Filtrar outliers para cálculo de métricas
+            mask = labels != -1
+            if np.sum(mask) < 100:  # Mínimo de pontos válidos
+                continue
+                
+            # Métricas
+            silhouette = silhouette_score(data[mask], labels[mask])
+            davies_bouldin = davies_bouldin_score(data[mask], labels[mask])
+            
+            result = {
+                'min_cluster_size': min_cluster_size,
+                'min_samples': min_samples,
+                'num_clusters': len(set(labels)) - (1 if -1 in labels else 0),
+                'outlier_rate': np.sum(labels == -1) / len(labels),
+                'silhouette': silhouette,
+                'davies_bouldin': davies_bouldin
+            }
+            
+            results.append(result)
+            
+            # Track best parameters
+            if silhouette > best_score:
+                best_score = silhouette
+                best_params = result
+    
+    return pd.DataFrame(results), best_params
+```
+
+## 📈 Análise de Resultados
+
+### Caracterização de Clusters
+
+Exemplo de análise detalhada dos clusters identificados:
+
+#### 🔥 Cluster 0 - Empresas de Varejo (263 clientes)
+**Características Principais:**
+- **Segmento**: Varejo (97.3% prevalência vs 19.9% global)
+- **Tempo como Cliente**: Recente 0-3 anos (96.6%)
+- **Faturamento**: Sem informação (97.8%)
+- **Linha de Receita**: SAAS (76.3%)
+- **Valor Contrato**: Até R$ 5k (72.0%)
+
+**Perfil de Negócio:**
+- Empresas pequenas do varejo
+- Clientes novos, ainda em fase de adoção
+- Contratos de baixo valor, modelo SAAS
+- Alto potencial de crescimento
+
+**Estratégia Recomendada:**
+- Foco em onboarding eficiente
+- Programas de education e training
+- Upsell gradual conforme maturidade
+- Success management proativo
+
+#### 💼 Cluster 10 - Setor Jurídico (74 clientes)  
+**Características Principais:**
+- **Segmento**: Jurídico (100% prevalência vs 1.3% global)
+- **Faturamento**: Até 15M (58.1% vs 29.2% global)
+- **Consultoria**: Alta demanda (14.9% vs 8.8% global)
+
+**Perfil de Negócio:**
+- Nicho especializado muito específico
+- Necessidades particulares do setor
+- Alta propensão a serviços de consultoria
+- Relacionamento de longo prazo
+
+**Estratégia Recomendada:**
+- Especialização em soluções jurídicas
+- Parcerias com consultorias especializadas
+- Premium pricing pela especialização
+- Referrals dentro do setor
+
+### Análise de Lift e Prevalência
+
+```python
+def calculate_cluster_insights(df, cluster_col='cluster'):
+    """
+    Calcula insights detalhados de cada cluster usando lift e prevalência
+    """
+    # Filtrar clusters pequenos (< 30 clientes)
+    cluster_counts = df[cluster_col].value_counts()
+    valid_clusters = cluster_counts[cluster_counts >= 30].index
+    df_filtered = df[df[cluster_col].isin(valid_clusters)]
+    
+    # Prevalência global
+    feature_cols = df_filtered.select_dtypes(include=[np.number]).columns
+    feature_cols = [col for col in feature_cols if col != cluster_col]
+    
+    global_prevalence = df_filtered[feature_cols].mean()
+    
+    # Análise por cluster
+    cluster_insights = {}
+    
+    for cluster_id in valid_clusters:
+        cluster_data = df_filtered[df_filtered[cluster_col] == cluster_id]
+        cluster_size = len(cluster_data)
+        
+        # Prevalência no cluster
+        cluster_prevalence = cluster_data[feature_cols].mean()
+        
+        # Calcular lift
+        lift = cluster_prevalence / (global_prevalence + 1e-9)
+        
+        # Delta absoluto
+        delta_abs = cluster_prevalence - global_prevalence
+        
+        # Combinar métricas
+        metrics_df = pd.DataFrame({
+            'prevalencia': cluster_prevalence,
+            'prev_global': global_prevalence,
+            'lift': lift,
+            'delta_abs': delta_abs
+        })
+        
+        # Ordenar por lift decrescente
+        metrics_df = metrics_df.sort_values('lift', ascending=False)
+        
+        # Top características (lift > 1.5 e delta > 0.05)
+        top_features = metrics_df[
+            (metrics_df['lift'] > 1.5) & 
+            (metrics_df['delta_abs'] > 0.05)
+        ].head(10)
+        
+        cluster_insights[cluster_id] = {
+            'size': cluster_size,
+            'top_features': top_features,
+            'profile': describe_cluster_profile(top_features)
+        }
+    
+    return cluster_insights
+
+def describe_cluster_profile(features_df):
+    """
+    Gera descrição textual do perfil do cluster
+    """
+    profile = []
+    
+    for feature, row in features_df.iterrows():
+        if 'SEGMENTO' in feature:
+            segment = feature.replace('DS_SEGMENTO_', '')
+            profile.append(f"Forte concentração no segmento {segment}")
+        elif 'FAIXA' in feature:
+            profile.append(f"Característica financeira: {feature}")
+        elif 'TEMPO' in feature:
+            profile.append(f"Perfil temporal: {feature}")
+    
+    return '; '.join(profile[:3])  # Top 3 características
+```
+
+## 📊 Visualizações e Insights
+
+### Dashboard de Clusters
+
+```python
+def create_cluster_dashboard(data, labels):
+    """
+    Cria dashboard interativo com múltiplas visualizações
+    """
+    fig = make_subplots(
+        rows=2, cols=3,
+        subplot_titles=[
+            'Distribuição de Clusters',
+            'Silhouette Analysis', 
+            'Cluster Characteristics',
+            'Revenue by Cluster',
+            'Geographic Distribution',
+            'Temporal Trends'
+        ],
+        specs=[[{"type": "pie"}, {"type": "bar"}, {"type": "heatmap"}],
+               [{"type": "box"}, {"type": "scatter_geo"}, {"type": "scatter"}]]
+    )
+    
+    # 1. Distribuição de clusters
+    cluster_counts = pd.Series(labels).value_counts()
+    fig.add_trace(
+        go.Pie(labels=cluster_counts.index, 
+               values=cluster_counts.values,
+               name="Clusters"),
+        row=1, col=1
+    )
+    
+    # 2. Silhouette scores por cluster
+    silhouette_scores = silhouette_samples(data, labels)
+    for cluster_id in sorted(set(labels)):
+        cluster_silhouette = silhouette_scores[labels == cluster_id]
+        fig.add_trace(
+            go.Bar(x=[cluster_id], 
+                   y=[cluster_silhouette.mean()],
+                   name=f"Cluster {cluster_id}"),
+            row=1, col=2
+        )
+    
+    # 3. Características por cluster (heatmap)
+    cluster_profiles = pd.DataFrame()
+    for cluster_id in sorted(set(labels)):
+        mask = labels == cluster_id
+        profile = data[mask].mean()
+        cluster_profiles[f'Cluster_{cluster_id}'] = profile
+    
+    fig.add_trace(
+        go.Heatmap(
+            z=cluster_profiles.values,
+            x=cluster_profiles.columns,
+            y=cluster_profiles.index,
+            colorscale='viridis'
+        ),
+        row=1, col=3
+    )
+    
+    return fig
+```
+
+### Análise de Comportamento Temporal
+
+```python
+def temporal_cluster_analysis(df):
+    """
+    Analisa evolução temporal dos clusters
+    """
+    # Agregação mensal
+    monthly_stats = df.groupby(['year_month', 'cluster']).agg({
+        'revenue': 'sum',
+        'customer_count': 'nunique',
+        'churn_rate': 'mean'
+    }).reset_index()
+    
+    # Visualização
+    fig = px.line(
+        monthly_stats,
+        x='year_month',
+        y='revenue',
+        color='cluster',
+        title='Revenue Evolution by Cluster',
+        labels={'revenue': 'Monthly Revenue (R$)'}
+    )
+    
+    return fig, monthly_stats
+```
+
+## 🔧 Configuração e Execução
+
+### Pré-requisitos
+
+```python
+# Principais bibliotecas utilizadas
+libraries = {
+    'data_processing': ['pandas', 'numpy', 'pyarrow'],
+    'machine_learning': ['scikit-learn', 'hdbscan', 'umap-learn'],
+    'visualization': ['plotly', 'seaborn', 'matplotlib'],
+    'statistics': ['scipy', 'statsmodels'],
+    'optimization': ['optuna', 'hyperopt']
+}
+```
+
+### Instalação Rápida
+
+```bash
+# Instalar dependências
+pip install -r requirements.txt
+
+# Instalar Jupyter extensions
+jupyter labextension install @jupyter-widgets/jupyterlab-manager
+jupyter labextension install plotlywidget
+
+# Configurar kernel
+python -m ipykernel install --user --name b2shift-ml
+```
+
+### Execução dos Notebooks
+
+```bash
+# Iniciar Jupyter Lab
+jupyter lab
+
+# Ou executar notebook específico via CLI
+jupyter nbconvert --to html --execute b2shift_clustering.ipynb
+```
+
+### Configuração de Dados
+
+```python
+# Configurar conexão com dados
+DATA_CONFIG = {
+    'source_type': 'bigquery',  # ou 'csv', 'parquet'
+    'project_id': 'seu-projeto-gcp',
+    'dataset_id': 'b2bshift_trusted',
+    'table_id': 'customers_features',
+    'cache_dir': './data/cache'
+}
+
+# Carregar dados
+def load_customer_data(config):
+    if config['source_type'] == 'bigquery':
+        return pd.read_gbq(
+            f"SELECT * FROM {config['dataset_id']}.{config['table_id']}", 
+            project_id=config['project_id']
+        )
+    elif config['source_type'] == 'csv':
+        return pd.read_csv(config['file_path'])
+```
+
+## 🎯 Casos de Uso Específicos
+
+### 1. Análise de Segmentação para Marketing
+
+```python
+def marketing_segmentation_analysis():
+    """
+    Análise focada em segmentação para campanhas de marketing
+    """
+    # Features específicas para marketing
+    marketing_features = [
+        'customer_lifetime_value',
+        'acquisition_channel',
+        'engagement_score',
+        'product_adoption_rate',
+        'support_ticket_frequency'
+    ]
+    
+    # Clustering otimizado para marketing
+    scaler = StandardScaler()
+    data_scaled = scaler.fit_transform(data[marketing_features])
+    
+    # K-Means com foco em interpretabilidade
+    kmeans = KMeans(n_clusters=5, random_state=42)
+    marketing_clusters = kmeans.fit_predict(data_scaled)
+    
+    # Caracterização para marketing
+    cluster_profiles = {}
+    for cluster_id in range(5):
+        mask = marketing_clusters == cluster_id
+        profile = {
+            'size': np.sum(mask),
+            'avg_clv': data.loc[mask, 'customer_lifetime_value'].mean(),
+            'primary_channel': data.loc[mask, 'acquisition_channel'].mode()[0],
+            'engagement': data.loc[mask, 'engagement_score'].mean(),
+            'campaign_strategy': generate_marketing_strategy(cluster_id, data[mask])
+        }
+        cluster_profiles[f'marketing_cluster_{cluster_id}'] = profile
+    
+    return cluster_profiles
+```
+
+### 2. Análise de Retenção e Churn
+
+```python
+def churn_risk_clustering():
+    """
+    Clustering específico para análise de risco de churn
+    """
+    # Features relacionadas a churn
+    churn_features = [
+        'days_since_last_login',
+        'support_tickets_last_30d', 
+        'feature_usage_decline',
+        'payment_delays',
+        'contract_renewal_probability'
+    ]
+    
+    # Normalização específica para churn
+    robust_scaler = RobustScaler()  # Menos sensível a outliers
+    data_scaled = robust_scaler.fit_transform(data[churn_features])
+    
+    # DBSCAN para identificar padrões anômalos
+    dbscan = DBSCAN(eps=0.3, min_samples=10)
+    risk_clusters = dbscan.fit_predict(data_scaled)
+    
+    # Análise de risco por cluster
+    risk_analysis = {}
+    for cluster_id in set(risk_clusters):
+        if cluster_id == -1:  # Outliers
+            continue
+            
+        mask = risk_clusters == cluster_id
+        cluster_data = data[mask]
+        
+        risk_analysis[f'risk_cluster_{cluster_id}'] = {
+            'size': len(cluster_data),
+            'avg_risk_score': cluster_data['churn_probability'].mean(),
+            'retention_actions': generate_retention_strategy(cluster_data),
+            'priority_level': calculate_priority(cluster_data)
+        }
+    
+    return risk_analysis
+```
+
+### 3. Otimização de Preços por Cluster
+
+```python
+def price_optimization_by_cluster():
+    """
+    Análise de otimização de preços baseada em clusters de valor
+    """
+    # Features para price sensitivity
+    price_features = [
+        'price_elasticity',
+        'willingness_to_pay',
+        'competitor_pricing_sensitivity',
+        'value_realization_score'
+    ]
+    
+    # Clustering com GMM para modelar distribuições de preço
+    gmm = GaussianMixture(n_components=4, covariance_type='full')
+    price_clusters = gmm.fit_predict(data[price_features])
+    
+    # Estratégia de pricing por cluster
+    pricing_strategies = {}
+    for cluster_id in range(4):
+        mask = price_clusters == cluster_id
+        cluster_data = data[mask]
+        
+        pricing_strategies[f'price_cluster_{cluster_id}'] = {
+            'size': len(cluster_data),
+            'current_avg_price': cluster_data['current_price'].mean(),
+            'optimal_price': calculate_optimal_price(cluster_data),
+            'price_strategy': determine_pricing_strategy(cluster_data),
+            'expected_revenue_lift': project_revenue_impact(cluster_data)
+        }
+    
+    return pricing_strategies
+```
+
+## 🚀 Performance e Otimização
+
+### Otimização de Performance
+
+```python
+# Configurações para datasets grandes
+OPTIMIZATION_CONFIG = {
+    'use_sample': True,
+    'sample_size': 10000,
+    'parallel_processing': True,
+    'n_jobs': -1,
+    'memory_efficient': True
+}
+
+def optimized_clustering(data, config=OPTIMIZATION_CONFIG):
+    """
+    Clustering otimizado para grandes datasets
+    """
+    if config['use_sample'] and len(data) > config['sample_size']:
+        # Sample estratificado
+        data_sample = data.sample(
+            n=config['sample_size'], 
+            random_state=42,
+            stratify=data['existing_cluster'] if 'existing_cluster' in data.columns else None
+        )
+    else:
+        data_sample = data
+    
+    # Processamento paralelo
+    with parallel_backend('threading', n_jobs=config['n_jobs']):
+        scaler = StandardScaler()
+        data_scaled = scaler.fit_transform(data_sample)
+        
+        # Mini-batch K-Means para eficiência
+        kmeans = MiniBatchKMeans(
+            n_clusters=8, 
+            batch_size=1000,
+            random_state=42,
+            n_init=3
+        )
+        
+        labels = kmeans.fit_predict(data_scaled)
+    
+    return labels, kmeans, scaler
+```
+
+### Métricas de Performance
+
+| Métrica | Valor Atual | Target | Status |
+|---------|-------------|--------|--------|
+| **Tempo de Execução** | ~45 min | < 30 min | 🔄 Em otimização |
+| **Uso de Memória** | ~8 GB | < 6 GB | ✅ OK |
+| **Silhouette Score** | 0.174 | > 0.2 | 🔄 Melhorando |
+| **Reproducibilidade** | 100% | 100% | ✅ OK |
+
+## 📈 Próximos Passos
+
+### Roadmap Técnico
+
+#### Curto Prazo (1-2 meses)
+- [ ] **Otimização de Performance**: Redução de 50% no tempo de execução
+- [ ] **AutoML Integration**: Hyperparameter tuning automático
+- [ ] **Real-time Scoring**: API para scoring em tempo real
+- [ ] **Advanced Visualizations**: Dashboards interativos com Plotly Dash
+
+#### Médio Prazo (3-6 meses)
+- [ ] **Deep Learning**: Neural networks para clustering
+- [ ] **Ensemble Methods**: Combinação de múltiplos algoritmos
+- [ ] **Streaming ML**: Clustering incremental com novos dados
+- [ ] **Explainable AI**: SHAP values para interpretabilidade
+
+#### Longo Prazo (6+ meses)  
+- [ ] **Federated Learning**: ML distribuído entre clientes
+- [ ] **Graph Neural Networks**: Clustering baseado em redes
+- [ ] **Quantum ML**: Preparação para quantum computing
+- [ ] **AutoML Platform**: Platform completa de AutoML
+
+### Melhorias Planejadas
+
+1. **Algorithm Enhancement**
+   - Implementação de OPTICS para clustering hierárquico
+   - Spectral clustering para estruturas complexas
+   - Consensus clustering para robustez
+
+2. **Feature Engineering Avançado**
+   - Feature selection automática
+   - Polynomial features e interactions
+   - Time-based features dinâmicas
+
+3. **Validation e Testing**
+   - Cross-validation temporal
+   - A/B testing de algoritmos
+   - Bootstrap confidence intervals
+
+---
+
+## 📞 Suporte e Contribuição
+
+Para questões específicas de Machine Learning:
+
+- **🔬 ML Issues**: Use labels `ml` e `clustering` nas issues
+- **📊 Data Issues**: Use label `data` para problemas de dados
+- **💡 Feature Requests**: Discussões no GitHub Discussions
+- **📚 Documentation**: Contribua com exemplos e tutoriais
+
+---
+
+*Análises desenvolvidas com ❤️ pela equipe de Data Science*
